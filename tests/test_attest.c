@@ -55,6 +55,13 @@ int main(void) {
     if (strcmp(first.plan_hex, second.plan_hex) == 0) return 6;
 
     options.verify_mode = DF_VERIFY_FULL;
+    options.force_system_disk = true;
+    if (df_attest_plan(source, target, &options,
+                       &second, &error) != DF_OK)
+        return 12;
+    if (strcmp(first.plan_hex, second.plan_hex) == 0) return 13;
+    options.force_system_disk = false;
+
     memset(wrong_seal, '0', 64u);
     wrong_seal[64] = '\0';
     if (df_write_image_attested(source, target, &options, wrong_seal,
