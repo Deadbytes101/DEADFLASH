@@ -95,8 +95,12 @@ function Find-VisualStudio {
             return [ordered]@{
                 source = 'existing-environment'
                 installation_path = $null
+                installation_version = $null
+                major_version = 0
                 vswhere = $null
                 cl = $clCommand.Source
+                bundled_cmake = $null
+                bundled_ctest = $null
             }
         }
         throw 'Visual Studio discovery failed: neither vswhere.exe nor cl.exe was found.'
@@ -104,16 +108,46 @@ function Find-VisualStudio {
 
     $vswhere = $vswhereCandidates[0]
     Write-Host "[DISCOVER] $vswhere"
-    $installationPathRaw = & $vswhere -latest -products * `
-        -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 `
-        -property installationPath | Select-Object -First 1
+
+    $commonArguments = @(
+        '-latest',
+        '-products', '*',
+        '-requires', 'Microsoft.VisualStudio.Component.VC.Tools.x86.x64'
+    )
+
+    $installationPathRaw = & $vswhere @commonArguments -property installationPath |
+        Select-Object -First 1
     if ($LASTEXITCODE -ne 0) {
-        throw "vswhere.exe failed with exit code $LASTEXITCODE."
+        throw "vswhere.exe failed while reading installationPath (exit $LASTEXITCODE)."
     }
     if ([string]::IsNullOrWhiteSpace($installationPathRaw)) {
         throw 'No Visual Studio installation with the x64 C++ toolchain was found.'
     }
     $installationPath = $installationPathRaw.Trim()
+
+    $installationVersionRaw = & $vswhere @commonArguments -property installationVersion |
+        Select-Object -First 1
+    if ($LASTEXITCODE -ne 0) {
+        throw "vswhere.exe failed while reading installationVersion (exit $LASTEXITCODE)."
+    }
+
+    $installationVersion = $null
+    $majorVersion = 0
+    if (-not [string]::IsNullOrWhiteSpace($installationVersionRaw)) {
+        $installationVersion = $installationVersionRaw.Trim()
+        $parsedVersion = $null
+        if ([Version]::TryParse($installationVersion, [ref]$parsedVersion)) {
+            $majorVersion = $parsedVersion.Major
+        }
+    }
+
+    if ($majorVersion -le 0) {
+        $leaf = Split-Path -Leaf $installationPath
+        $parsedMajor = 0
+        if ([int]::TryParse($leaf, [ref]$parsedMajor)) {
+            $majorVersion = $parsedMajor
+        }
+    }
 
     $clPath = $null
     $toolsRoot = Join-Path $installationPath 'VC\Tools\MSVC'
@@ -128,6 +162,7 @@ function Find-VisualStudio {
             }
         }
     }
+
     if ([string]::IsNullOrWhiteSpace($clPath) -and $null -ne $clCommand) {
         $clPath = $clCommand.Source
     }
@@ -135,12 +170,70 @@ function Find-VisualStudio {
         throw "Visual Studio was found at '$installationPath', but x64 cl.exe was not found."
     }
 
+    $bundledCmake = $null
+    $bundledCtest = $null
+    $bundledCmakeRoot = Join-Path $installationPath `
+        'Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin'
+    $bundledCmakeCandidate = Join-Path $bundledCmakeRoot 'cmake.exe'
+    $bundledCtestCandidate = Join-Path $bundledCmakeRoot 'ctest.exe'
+    if ((Test-Path $bundledCmakeCandidate -PathType Leaf) -and
+        (Test-Path $bundledCtestCandidate -PathType Leaf)) {
+        $bundledCmake = $bundledCmakeCandidate
+        $bundledCtest = $bundledCtestCandidate
+    }
+
     return [ordered]@{
         source = 'vswhere'
         installation_path = $installationPath
+        installation_version = $installationVersion
+        major_version = $majorVersion
         vswhere = $vswhere
         cl = $clPath
+        bundled_cmake = $bundledCmake
+        bundled_ctest = $bundledCtest
     }
+}
+
+function Select-CMakeGenerator {
+    param(
+        [Parameter(Mandatory)][string]$HelpText,
+        [Parameter(Mandatory)][int]$VisualStudioMajor
+    )
+
+    $allMatches = [regex]::Matches(
+        $HelpText,
+        '(?m)^\s*\*?\s*(Visual Studio\s+(\d+)\s+[^=\r\n]+?)\s*='
+    )
+    $generators = @()
+    foreach ($match in $allMatches) {
+        $generators += [ordered]@{
+            name = $match.Groups[1].Value.Trim()
+            major = [int]$match.Groups[2].Value
+        }
+    }
+
+    if ($generators.Count -eq 0) {
+        throw 'CMake did not report any Visual Studio generators in `cmake --help`.'
+    }
+
+    if ($VisualStudioMajor -gt 0) {
+        $matching = @($generators | Where-Object { $_.major -eq $VisualStudioMajor })
+        if ($matching.Count -gt 0) {
+            return $matching[0].name
+        }
+
+        $available = ($generators | ForEach-Object { $_.name }) -join ', '
+        throw (
+            "Installed Visual Studio major version is $VisualStudioMajor, but this CMake " +
+            "does not provide a matching generator. Available: $available. " +
+            'Install a newer CMake build that supports the installed Visual Studio.'
+        )
+    }
+
+    $selected = $generators |
+        Sort-Object -Property major -Descending |
+        Select-Object -First 1
+    return $selected.name
 }
 
 function Invoke-Recorded {
@@ -179,9 +272,7 @@ function Invoke-Recorded {
 
     $nextHeartbeat = 5
     $timedOut = $false
-    while (-not $process.HasExited) {
-        Start-Sleep -Seconds 1
-        $process.Refresh()
+    while (-not $process.WaitForExit(1000)) {
         if ($timer.Elapsed.TotalSeconds -ge $nextHeartbeat) {
             Write-Host ("[RUNNING] {0} elapsed={1:N0}s" -f $Name, $timer.Elapsed.TotalSeconds)
             $nextHeartbeat += 5
@@ -193,14 +284,23 @@ function Invoke-Recorded {
             break
         }
     }
+
+    $exitCode = -1
     if (-not $timedOut) {
+        # The second parameterless wait flushes redirected streams. Refresh is
+        # required for reliable ExitCode retrieval on Windows PowerShell 5.1.
         $process.WaitForExit()
+        $process.Refresh()
+        $rawExitCode = $process.ExitCode
+        if ($null -eq $rawExitCode) {
+            throw "Command '$Name' exited but PowerShell did not expose an exit code."
+        }
+        $exitCode = [int]$rawExitCode
     }
     $timer.Stop()
 
     $stdout = if (Test-Path $stdoutPath) { Get-Content $stdoutPath -Raw } else { '' }
     $stderr = if (Test-Path $stderrPath) { Get-Content $stderrPath -Raw } else { '' }
-    $exitCode = if ($timedOut) { -1 } else { $process.ExitCode }
     $record = [ordered]@{
         name = $Name
         executable = $FilePath
@@ -242,6 +342,7 @@ if ([string]::IsNullOrWhiteSpace($scriptRoot)) {
     }
     $scriptRoot = Split-Path -Parent $scriptPath
 }
+
 if ([string]::IsNullOrWhiteSpace($SourceDir)) {
     $SourceDir = Split-Path -Parent $scriptRoot
 } else {
@@ -251,11 +352,13 @@ $SourceDir = [System.IO.Path]::GetFullPath($SourceDir)
 if (-not (Test-Path $SourceDir -PathType Container)) {
     throw "Source directory does not exist: $SourceDir"
 }
+
 if ([string]::IsNullOrWhiteSpace($BuildDir)) {
     $BuildDir = Join-Path $SourceDir 'build-msvc-qualification'
 } else {
     $BuildDir = Resolve-FullPath -Path $BuildDir -Base $SourceDir
 }
+
 if ([string]::IsNullOrWhiteSpace($EvidenceDir)) {
     $EvidenceDir = Join-Path $SourceDir 'bench\results'
 } else {
@@ -284,11 +387,12 @@ $script:Record = [ordered]@{
     build_dir = $BuildDir
     evidence_path = $evidencePath
     log_directory = $script:TempLogDir
-    cmake_generator = 'Visual Studio 17 2022'
+    cmake_generator = $null
     cmake_architecture = 'x64'
     expected_tests = 7
     host = Get-HostMetadata
     visual_studio_environment = $null
+    build_tools = $null
     git_commit = $null
     commands = @()
     tests = $null
@@ -301,17 +405,68 @@ try {
     Write-Host "[1/7] Discover Visual Studio and MSVC"
     $script:Record.visual_studio_environment = Find-VisualStudio
     Write-Host ("[FOUND] Visual Studio source: {0}" -f $script:Record.visual_studio_environment.source)
+    Write-Host ("[FOUND] Visual Studio version: {0}" -f $script:Record.visual_studio_environment.installation_version)
     Write-Host ("[FOUND] cl.exe: {0}" -f $script:Record.visual_studio_environment.cl)
 
     Write-Host ""
-    Write-Host "[2/7] Validate required tools"
-    foreach ($required in @('cmake.exe', 'ctest.exe', 'python.exe')) {
-        $command = Get-Command $required -ErrorAction SilentlyContinue
-        if ($null -eq $command) {
-            throw "Required executable is unavailable: $required"
+    Write-Host "[2/7] Validate tools and select matching CMake generator"
+    $toolCommands = [ordered]@{}
+
+    if (-not [string]::IsNullOrWhiteSpace(
+            $script:Record.visual_studio_environment.bundled_cmake
+        )) {
+        $toolCommands['cmake.exe'] =
+            $script:Record.visual_studio_environment.bundled_cmake
+        $toolCommands['ctest.exe'] =
+            $script:Record.visual_studio_environment.bundled_ctest
+        $cmakeSource = 'visual-studio-bundled'
+    } else {
+        $cmakeCommand = Get-Command cmake.exe -ErrorAction SilentlyContinue
+        $ctestCommand = Get-Command ctest.exe -ErrorAction SilentlyContinue
+        if ($null -eq $cmakeCommand) {
+            throw 'Required executable is unavailable: cmake.exe'
         }
-        Write-Host ("[FOUND] {0}: {1}" -f $required, $command.Source)
+        if ($null -eq $ctestCommand) {
+            throw 'Required executable is unavailable: ctest.exe'
+        }
+        $toolCommands['cmake.exe'] = $cmakeCommand.Source
+        $toolCommands['ctest.exe'] = $ctestCommand.Source
+        $cmakeSource = 'path'
     }
+
+    $pythonCommand = Get-Command python.exe -ErrorAction SilentlyContinue
+    if ($null -eq $pythonCommand) {
+        throw 'Required executable is unavailable: python.exe'
+    }
+    $toolCommands['python.exe'] = $pythonCommand.Source
+
+    $script:Record.build_tools = [ordered]@{
+        cmake_source = $cmakeSource
+        cmake = $toolCommands['cmake.exe']
+        ctest = $toolCommands['ctest.exe']
+        python = $toolCommands['python.exe']
+    }
+    Write-Host ("[FOUND] cmake.exe ({0}): {1}" -f
+        $cmakeSource, $toolCommands['cmake.exe'])
+    Write-Host ("[FOUND] ctest.exe: {0}" -f $toolCommands['ctest.exe'])
+    Write-Host ("[FOUND] python.exe: {0}" -f $toolCommands['python.exe'])
+
+    Invoke-Recorded -Name 'cmake-version' `
+        -FilePath $toolCommands['cmake.exe'] `
+        -Arguments @('--version') `
+        -WorkingDirectory $SourceDir `
+        -TimeoutSeconds 60 | Out-Null
+    $cmakeHelp = Invoke-Recorded -Name 'cmake-help' `
+        -FilePath $toolCommands['cmake.exe'] `
+        -Arguments @('--help') `
+        -WorkingDirectory $SourceDir `
+        -TimeoutSeconds 60
+    $cmakeHelpText = $cmakeHelp.stdout + "`n" + $cmakeHelp.stderr
+    $generator = Select-CMakeGenerator `
+        -HelpText $cmakeHelpText `
+        -VisualStudioMajor $script:Record.visual_studio_environment.major_version
+    $script:Record.cmake_generator = $generator
+    Write-Host ("[SELECTED] CMake generator: {0}" -f $generator)
 
     $git = Get-Command git.exe -ErrorAction SilentlyContinue
     if ($null -ne $git) {
@@ -329,34 +484,45 @@ try {
     New-Item -ItemType Directory -Force -Path $BuildDir | Out-Null
 
     Write-Host ""
-    Write-Host "[3/7] Record compiler version"
+    Write-Host "[3/7] Compile MSVC probe and record compiler version"
+    $probeSource = Join-Path $script:TempLogDir 'cl-version-probe.c'
+    Set-Content -Path $probeSource `
+        -Value 'int deadflash_msvc_probe(void) { return 0; }' `
+        -Encoding ascii
     Invoke-Recorded -Name 'cl-version' `
         -FilePath $script:Record.visual_studio_environment.cl `
-        -Arguments @('/Bv') `
+        -Arguments @('/nologo', '/Bv', '/TC', '/Zs', $probeSource) `
         -WorkingDirectory $SourceDir `
-        -AcceptedExitCodes @(0, 2) `
+        -AcceptedExitCodes @(0) `
         -TimeoutSeconds 60 | Out-Null
 
     Write-Host ""
-    Write-Host "[4/7] Configure Visual Studio 2022 x64"
-    Invoke-Recorded -Name 'cmake-configure' -FilePath 'cmake.exe' `
-        -Arguments @('-S', $SourceDir, '-B', $BuildDir,
-                     '-G', 'Visual Studio 17 2022', '-A', 'x64',
-                     '-DDEADFLASH_WARNINGS_AS_ERRORS=ON',
-                     '-DDEADFLASH_BUILD_TESTS=ON') `
+    Write-Host ("[4/7] Configure {0} x64" -f $generator)
+    Invoke-Recorded -Name 'cmake-configure' `
+        -FilePath $toolCommands['cmake.exe'] `
+        -Arguments @(
+            '-S', $SourceDir,
+            '-B', $BuildDir,
+            '-G', $generator,
+            '-A', 'x64',
+            '-DDEADFLASH_WARNINGS_AS_ERRORS=ON',
+            '-DDEADFLASH_BUILD_TESTS=ON'
+        ) `
         -WorkingDirectory $SourceDir `
         -TimeoutSeconds 300 | Out-Null
 
     Write-Host ""
     Write-Host "[5/7] Build Release"
-    Invoke-Recorded -Name 'cmake-build' -FilePath 'cmake.exe' `
+    Invoke-Recorded -Name 'cmake-build' `
+        -FilePath $toolCommands['cmake.exe'] `
         -Arguments @('--build', $BuildDir, '--config', 'Release', '--parallel') `
         -WorkingDirectory $SourceDir `
         -TimeoutSeconds 1800 | Out-Null
 
     Write-Host ""
     Write-Host "[6/7] Run all seven tests"
-    $ctest = Invoke-Recorded -Name 'ctest' -FilePath 'ctest.exe' `
+    $ctest = Invoke-Recorded -Name 'ctest' `
+        -FilePath $toolCommands['ctest.exe'] `
         -Arguments @('--test-dir', $BuildDir, '-C', 'Release', '--output-on-failure') `
         -WorkingDirectory $SourceDir `
         -TimeoutSeconds 600
@@ -365,7 +531,10 @@ try {
     $script:Record.tests = [ordered]@{
         expected = 7
         passed = if ($testsPassed) { 7 } else { $null }
-        raw_summary = ($ctest.stdout -split "`r?`n" | Where-Object { $_ -match 'tests passed|Total Test time' })
+        raw_summary = (
+            $ctest.stdout -split "`r?`n" |
+            Where-Object { $_ -match 'tests passed|Total Test time' }
+        )
     }
     if (-not $testsPassed) {
         throw 'CTest exited successfully but did not report all seven tests passing.'
@@ -382,17 +551,22 @@ try {
     Write-Host ""
     Write-Host "[7/7] Run proof/corruption end-to-end qualification"
     $e2eWork = Join-Path $BuildDir 'e2e-msvc'
-    Invoke-Recorded -Name 'e2e-proof' -FilePath 'python.exe' `
-        -Arguments @((Join-Path $SourceDir 'scripts\e2e-proof.py'),
-                     '--deadflash', $deadflash,
-                     '--proof', $proof,
-                     '--work-dir', $e2eWork,
-                     '--summary', $e2ePath) `
+    Invoke-Recorded -Name 'e2e-proof' `
+        -FilePath $toolCommands['python.exe'] `
+        -Arguments @(
+            (Join-Path $SourceDir 'scripts\e2e-proof.py'),
+            '--deadflash', $deadflash,
+            '--proof', $proof,
+            '--work-dir', $e2eWork,
+            '--summary', $e2ePath
+        ) `
         -WorkingDirectory $SourceDir `
         -TimeoutSeconds 900 | Out-Null
+
     if (-not (Test-Path $e2ePath -PathType Leaf)) {
         throw "E2E evidence was not created: $e2ePath"
     }
+
     $script:Record.e2e = Get-Content $e2ePath -Raw | ConvertFrom-Json
     if ($script:Record.e2e.write_state -ne 'success_verified' -or
         $script:Record.e2e.proof_state -ne 'success_proven' -or
@@ -418,7 +592,8 @@ catch {
 }
 finally {
     $script:Record.completed_utc = [DateTimeOffset]::UtcNow.ToString('o')
-    $script:Record | ConvertTo-Json -Depth 12 | Set-Content -Path $evidencePath -Encoding utf8
+    $script:Record | ConvertTo-Json -Depth 12 |
+        Set-Content -Path $evidencePath -Encoding utf8
     Write-Host ("MSVC EVIDENCE: {0}" -f $evidencePath)
     Write-Host ("MSVC LOGS: {0}" -f $script:TempLogDir)
 }
