@@ -6,9 +6,9 @@ VERSION: 1.0.0 CANDIDATE
 DESIGN GOAL
 -----------
 
-DEADFLASH separates planning, authorization, execution, verification, and
-proof. No frontend owns destructive policy. The raw-device path lives in the
-core library and receives an explicit operation configuration.
+DEADFLASH separates target identity, planning, authorization, execution,
+verification, and proof. No frontend owns destructive policy. The raw-device
+path lives in the core library and receives an explicit operation configuration.
 
 The competitive target is deliberately narrow:
 
@@ -25,36 +25,85 @@ IMPLEMENTED CONTROL FLOW
 ```mermaid
 flowchart TD
     A[Source Image] --> B[Full Source SHA-256]
-    C[Target Path] --> D[Target Geometry + Safety Classification]
-    E[Write Policy] --> F[Verify + Buffer + Retry + Direct I/O]
-    SA[Safety Authorization] --> SF[Allow Device + Mounted/System Overrides]
-    B --> G[Canonical Operation Record]
-    D --> G
-    F --> G
-    SF --> G
-    G --> H[SHA-256 Plan Seal]
-    H --> I{Recomputed Seal Equal?}
-    I -->|No| X[failed_before_write]
-    I -->|Yes| J[Core Target Reinspection]
-    J --> K{Target Token Equal?}
-    K -->|No| X
-    K -->|Yes| L[Lock / Dismount]
-    L --> M[Aligned Raw Write]
-    M --> N[Streaming Source SHA-256]
-    N --> O{Written Source Hash Equal to Plan?}
-    O -->|No| P[plan_breach_partial_media]
-    O -->|Yes| Q[Flush Barrier]
-    Q --> R[Full or Sample Readback]
-    R --> S[JSON Evidence]
-    R --> T[Chunk SHA-256 Manifest]
-    T --> U[Binary Merkle Root]
-    U --> V[Source + Target Chunk Readback]
-    V -->|Equal| W[success_proven]
-    V -->|Different| Y[First Bad Chunk + Exact Byte Offset]
+    C[Target Path] --> D[Capacity + Sector Geometry]
+    D --> E[Bus + Vendor + Product + Revision]
+    E --> F[Serial SHA-256 when exposed]
+    F --> G[Target Token v2 + Identity Strength]
+    H[Write Policy] --> I[Verify + Buffer + Retry + Direct I/O]
+    J[Safety Authorization] --> K[Allow Device + Mounted/System Overrides]
+    B --> L[Canonical Operation Record]
+    G --> L
+    I --> L
+    K --> L
+    L --> M[SHA-256 Plan Seal]
+    M --> N{Live Seal Equal?}
+    N -->|No| X[failed_before_write]
+    N -->|Yes| O[Live Hardware Fingerprint Reinspection]
+    O --> P{Target Token Equal?}
+    P -->|No| X
+    P -->|Yes| Q[Lock / Dismount]
+    Q --> R[Aligned Raw Write]
+    R --> S[Streaming Source SHA-256]
+    S --> T{Written Source Hash Equal to Plan?}
+    T -->|No| U[plan_breach_partial_media]
+    T -->|Yes| V[Flush Barrier]
+    V --> W[Full or Sample Readback]
+    W --> EVIDENCE[JSON Evidence]
+    W --> MANIFEST[Chunk SHA-256 Manifest]
+    MANIFEST --> MERKLE[Binary Merkle Root]
+    MERKLE --> PROOF[Source + Target Chunk Readback]
+    PROOF -->|Equal| PROVEN[success_proven]
+    PROOF -->|Different| OFFSET[First Bad Chunk + Exact Byte Offset]
 ```
 
 Every node above exists in the candidate source tree. The diagram is not a
 roadmap and does not imply hardware qualification that has not been run.
+
+TARGET TOKEN V2
+---------------
+
+`df_compute_target_token` hashes a domain-separated canonical target record:
+
+    deadflash.target.v2
+    target path
+    target kind
+    byte capacity
+    logical sector size
+    physical sector size
+    read-only classification
+    system-disk classification
+    descriptor-present flag
+    serial-bound flag
+    bus type
+    vendor
+    product
+    revision
+    SHA-256 of hardware serial when exposed
+
+The token shown to the operator remains a short 16-hex stale-target guard. The
+full serial is never emitted by the CLI, JSON evidence, or plan seal. Only its
+SHA-256 is retained.
+
+Identity strength is explicit:
+
+    SERIAL_BOUND
+        Bus/vendor/product/revision and serial SHA-256 are available.
+
+    DESCRIPTOR_BOUND
+        Some descriptor fields are available but no serial is exposed.
+
+    GEOMETRY_ONLY
+        The operating system or bridge exposes no useful hardware descriptor.
+
+A GEOMETRY_ONLY token is still better than a drive letter because it binds path,
+kind, capacity, sector geometry, and safety classification. It is not treated
+as unique hardware identity. Physical qualification records must preserve this
+strength value.
+
+Windows queries `StorageDeviceProperty` and
+`StorageAccessAlignmentProperty`. Linux reads the whole-disk sysfs descriptor
+fields and serial when available. Descriptor failure does not invent data; it
+falls back to a weaker, explicitly reported identity strength.
 
 OPERATION PLAN ATTESTATION
 --------------------------
@@ -63,20 +112,20 @@ OPERATION PLAN ATTESTATION
 The record binds all fields that can change the meaning, safety authorization,
 or correctness of the write:
 
-    - Source byte length
-    - Full source SHA-256
-    - Current target confirmation token
-    - Target kind and byte capacity
-    - Logical and physical sector sizes
-    - Verification mode
-    - Deterministic sample count
-    - I/O buffer size
-    - Write retry count
-    - Direct-I/O policy
-    - Regular-file truncation policy
-    - Physical-device authorization
-    - Mounted-target override
-    - System-disk override
+    source byte length
+    full source SHA-256
+    current target token v2
+    target kind and byte capacity
+    logical and physical sector sizes
+    verification mode
+    deterministic sample count
+    I/O buffer size
+    write retry count
+    direct-I/O policy
+    regular-file truncation policy
+    physical-device authorization
+    mounted-target override
+    system-disk override
 
 A physical plan cannot be sealed unless `--allow-device` and the current target
 token are supplied. `deadflash-proof write --seal HEX` recomputes the same
@@ -92,9 +141,9 @@ partial or unauthorized stream.
 Pre-write rejection initializes the result record to `failed_before_write`.
 No CLI path prints uninitialized state or byte counters after a bad seal.
 
-The plan seal is not a digital signature. Anyone who can replace the program
-or trusted seal can generate another seal. Its purpose is exact stale-plan,
-safety-policy-change, and I/O-policy-change detection, not identity
+The target token and plan seal are hashes, not digital signatures. Anyone who
+can replace the trusted binary or seal can create a different valid record.
+Their purpose is stale-target and policy-change detection, not operator identity
 authentication.
 
 PROOF MANIFEST
@@ -121,9 +170,9 @@ flowchart BT
     P1 --> ROOT
 ```
 
-The Merkle root is a compact integrity summary. It is not an authenticity
-proof unless the root is stored or signed by an external trusted system.
-DEADFLASH does not pretend otherwise.
+The Merkle root is a compact integrity summary. It is not an authenticity proof
+unless the root is stored or signed by an external trusted system. DEADFLASH
+does not pretend otherwise.
 
 EXACT MISMATCH LOCALIZATION
 ---------------------------
@@ -132,8 +181,6 @@ A whole-image digest reports only that two images differ. The proof verifier
 first validates source identity against the manifest, then compares source and
 target chunk digests. When a target chunk differs, it byte-compares only that
 chunk and reports the first exact bad byte offset.
-
-This makes corruption evidence operationally useful:
 
     target_mismatch
     first_bad_chunk  = N
@@ -156,13 +203,14 @@ COMMON
 SHA256
 
     Dependency-free SHA-256 used for source identity, write-stream identity,
-    target verification, plan seals, chunk digests, and Merkle parents.
+    target verification, target tokens, plan seals, chunk digests, and Merkle
+    parents.
 
 DEVICE
 
-    Target geometry, classification, confirmation token, system-disk guard,
-    mount detection, raw handles, volume locking, explicit-offset I/O, flush,
-    and identity reinspection.
+    Target geometry and descriptor discovery, identity-strength classification,
+    serial hashing, target token v2, system-disk guard, mount detection, raw
+    handles, volume locking, explicit-offset I/O, flush, and live reinspection.
 
 PIPELINE
 
@@ -189,17 +237,20 @@ FAT32
 
 EVIDENCE
 
-    Schema `deadflash.evidence.v1` records target geometry, policy, timings,
-    byte counts, verification state, hashes, retries, and errors.
+    Schema `deadflash.evidence.v1` records target geometry, identity strength,
+    descriptor fields, serial SHA-256, token, policy, timings, byte counts,
+    verification state, hashes, retries, and errors.
 
 HARD INVARIANTS
 ---------------
 
     - A physical plan requires explicit device permission and the live token.
+    - Target token v2 changes when a bound descriptor or serial hash changes.
+    - Raw serial text is never emitted into evidence or authorization records.
+    - Identity strength is explicit and may fall back to GEOMETRY_ONLY.
     - A physical write requires the same permission and token.
     - Mounted-target and system-disk overrides are part of the plan seal.
-    - Attested writes require a seal over live source, target, safety, and I/O
-      policy.
+    - Attested writes bind live source, target fingerprint, safety, and I/O.
     - Source and target I/O use explicit offsets.
     - Short reads and short writes are failures.
     - Target changes abort before the write handle is opened.
@@ -214,8 +265,8 @@ HARD INVARIANTS
 MEASURABLE ADVANTAGE CONTRACT
 -----------------------------
 
-DEADFLASH may claim an advantage over Rufus only for a metric that is measured
-under equal correctness requirements.
+DEADFLASH may claim an advantage over Rufus only for a metric measured under
+equal correctness requirements.
 
 Required proof-oriented metrics:
 
@@ -236,25 +287,27 @@ A run is disqualified if either tool writes a different image, skips the flush
 boundary, uses weaker verification, changes safety policy after authorization,
 or reports success after injected corruption.
 
-The repository includes a file-backed proof collector and raw sample records.
-Those records validate the harness and exact-offset detector. They are not a
-physical USB benchmark and not evidence of broad superiority over Rufus.
+The repository includes a file-backed token-v2 proof collector and raw sample
+records. Those records validate the harness and exact-offset detector. They are
+not a physical USB benchmark and not evidence of broad superiority over Rufus.
 
 KNOWN BOUNDARIES
 ----------------
 
     - The v1.0 pipeline is synchronous, not an IOCP queue-depth engine.
-    - The target token does not yet bind hardware serial, VID/PID, or platform
-      device-instance ID.
-    - Plan seals are hashes, not signatures.
+    - Some USB bridges expose no stable serial or useful descriptor; those are
+      explicitly GEOMETRY_ONLY or DESCRIPTOR_BOUND.
+    - Token v2 does not yet bind a platform device-instance ID independent of
+      the device path.
+    - Target tokens and plan seals are hashes, not signatures.
     - Merkle roots provide integrity summaries, not identity authentication.
     - Proof generation stores one 32-byte digest per chunk in memory.
     - Exact byte localization requires the original source image.
     - FAT32 formatting supports 512-byte logical sectors only.
     - GPT, exFAT, NTFS creation, ISO extraction, WIM splitting, persistence,
       Windows To Go, and boot emulation are outside this candidate.
-    - Physical hardware validation must run on sacrificial media before the raw
-      backends are production-qualified.
+    - Windows descriptor queries and raw-device behavior still require MSVC and
+      sacrificial-hardware qualification.
 
 NO MAGIC
 --------
