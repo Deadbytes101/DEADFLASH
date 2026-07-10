@@ -23,8 +23,6 @@ jobs:
             compiler: gcc
           - os: ubuntu-latest
             compiler: clang
-          - os: windows-latest
-            compiler: msvc
 
     steps:
       - uses: actions/checkout@v4
@@ -51,28 +49,39 @@ jobs:
         run: ctest --test-dir build -C Release --output-on-failure
 
       - name: CLI and proof end-to-end qualification
-        shell: bash
-        run: |
-          if [[ "${{ runner.os }}" == "Windows" ]]; then
-            DEADFLASH=./build/Release/deadflash.exe
-            PROOF=./build/Release/deadflash-proof.exe
-          else
-            DEADFLASH=./build/deadflash
-            PROOF=./build/deadflash-proof
-          fi
-          "$DEADFLASH" version
-          "$PROOF" version
-          python scripts/e2e-proof.py \
-            --deadflash "$DEADFLASH" \
-            --proof "$PROOF" \
-            --work-dir e2e-ci \
-            --summary e2e-ci-summary.json
+        run: >-
+          python scripts/e2e-proof.py
+          --deadflash build/deadflash
+          --proof build/deadflash-proof
+          --work-dir e2e-ci
+          --summary e2e-ci-summary.json
 
       - name: Upload end-to-end evidence
         uses: actions/upload-artifact@v4
         with:
           name: e2e-${{ matrix.os }}-${{ matrix.compiler }}
           path: e2e-ci-summary.json
+          if-no-files-found: error
+
+  msvc-qualification:
+    name: windows-latest / msvc-evidence
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Build, test, and prove with MSVC
+        shell: pwsh
+        run: >-
+          ./scripts/qualify-msvc.ps1
+          -BuildDir build-msvc-ci
+          -EvidenceDir msvc-evidence
+      - name: Upload MSVC qualification evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: msvc-qualification
+          path: msvc-evidence/*.json
           if-no-files-found: error
 
   win32-api-surface:
