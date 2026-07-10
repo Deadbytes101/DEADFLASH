@@ -85,6 +85,17 @@ jobs:
           CC: clang
         run: bash scripts/check-win32-surface.sh
 
+  benchmark-contract:
+    name: ubuntu-latest / benchmark-comparison-contract
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Accept equal context and reject mismatched context
+        run: python scripts/test-benchmark-comparator.py
+
   sanitizer:
     name: ubuntu-latest / gcc-asan-ubsan
     runs-on: ubuntu-latest
