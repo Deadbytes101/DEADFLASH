@@ -95,7 +95,7 @@ jobs:
         run: bash scripts/check-win32-surface.sh
 
   benchmark-contract:
-    name: ubuntu-latest / benchmark-comparison-contract
+    name: ubuntu-latest / benchmark-and-image-contracts
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -104,6 +104,8 @@ jobs:
           python-version: '3.13'
       - name: Accept equal context and reject mismatched context
         run: python scripts/test-benchmark-comparator.py
+      - name: Reproduce image and localize injected corruption
+        run: python scripts/test-qualification-image.py
 
   sanitizer:
     name: ubuntu-latest / gcc-asan-ubsan
