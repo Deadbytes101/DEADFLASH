@@ -14,19 +14,20 @@ SCOPE
     Host: Linux x86_64 container
     GCC: 14.2.0
     Clang: 17.0.0 swiftlang build
+    Target token: deadflash.target.v2
 
 STRICT GCC BUILD
 ----------------
 
-    cmake -S . -B build-integrated -G Ninja \
+    cmake -S . -B build-hwfp -G Ninja \
         -DDEADFLASH_WARNINGS_AS_ERRORS=ON \
         -DDEADFLASH_BUILD_TESTS=ON
-    cmake --build build-integrated --parallel
-    ctest --test-dir build-integrated --output-on-failure
+    cmake --build build-hwfp --parallel
+    ctest --test-dir build-hwfp --output-on-failure
 
 RESULT
 
-    6/6 PASS
+    7/7 PASS
 
     sha256
     pipeline
@@ -34,19 +35,20 @@ RESULT
     identity
     attest
     proof
+    fingerprint
 
 STRICT CLANG BUILD
 ------------------
 
-    CC=clang cmake -S . -B build-clang -G Ninja \
+    CC=clang cmake -S . -B build-hwfp-clang -G Ninja \
         -DDEADFLASH_WARNINGS_AS_ERRORS=ON \
         -DDEADFLASH_BUILD_TESTS=ON
-    cmake --build build-clang --parallel
-    ctest --test-dir build-clang --output-on-failure
+    cmake --build build-hwfp-clang --parallel
+    ctest --test-dir build-hwfp-clang --output-on-failure
 
 RESULT
 
-    6/6 PASS
+    7/7 PASS
 
 GCC ASAN + UBSAN
 ----------------
@@ -54,35 +56,67 @@ GCC ASAN + UBSAN
     CC=gcc \
     CFLAGS='-fsanitize=address,undefined -fno-omit-frame-pointer' \
     LDFLAGS='-fsanitize=address,undefined' \
-    cmake -S . -B build-gcc-san -G Ninja \
+    cmake -S . -B build-hwfp-san -G Ninja \
         -DDEADFLASH_WARNINGS_AS_ERRORS=ON \
         -DDEADFLASH_BUILD_TESTS=ON
 
-    cmake --build build-gcc-san --parallel
+    cmake --build build-hwfp-san --parallel
 
     ASAN_OPTIONS='detect_leaks=1:abort_on_error=1' \
     UBSAN_OPTIONS='halt_on_error=1:print_stacktrace=1' \
-    ctest --test-dir build-gcc-san --output-on-failure
+    ctest --test-dir build-hwfp-san --output-on-failure
 
 RESULT
 
-    6/6 PASS
+    7/7 PASS
+
+HARDWARE-FINGERPRINT REGRESSION
+-------------------------------
+
+The fingerprint test verifies:
+
+    deterministic token generation
+    descriptor change invalidates token
+    serial-hash addition invalidates token
+    serial-hash mutation invalidates token
+
+The target token v2 binds:
+
+    target path and kind
+    byte capacity
+    logical and physical sector size
+    read-only and system-disk classification
+    descriptor availability
+    bus type
+    vendor, product, and revision
+    SHA-256 of the hardware serial when exposed
+
+Raw serial text is not emitted into the token, CLI output, or evidence report.
+A device that exposes no descriptor remains explicitly GEOMETRY_ONLY rather
+than being represented as strongly identified.
 
 END-TO-END PROOF FLOW
 ---------------------
+
+HARNESS
+
+    python scripts/e2e-proof.py \
+        --deadflash build-hwfp/deadflash \
+        --proof build-hwfp/deadflash-proof \
+        --work-dir /tmp/deadflash-e2e-hwfp
 
 IMAGE
 
     source size: 6,291,579 bytes
     source SHA-256:
-    bd57012cc331a7693999c6ad6b4938a1cefbfc122e599ca209931fa1ba27cedd
+    8dcc87bfefd38f65a76bc76b5fd4fc79bbb8f6b570a2a7dfe70a4cf4f718474e
 
 FLOW
 
     deadflash-proof seal
     deadflash-proof write --verify full --proof --chunk 1MiB
     deadflash-proof verify
-    inject one-byte corruption at absolute offset 3,146,505
+    inject one-byte corruption at absolute offset 3,145,806
     deadflash-proof verify again
 
 RESULT
@@ -90,8 +124,8 @@ RESULT
     write state: success_verified
     proof state before corruption: success_proven
     state after corruption: target_mismatch
-    injected bad offset: 3,146,505
-    reported bad offset: 3,146,505
+    injected bad offset: 3,145,806
+    reported bad offset: 3,145,806
     exact offset: PASS
 
 CLI SMOKE
@@ -107,13 +141,13 @@ The installed Swift Clang 17 AddressSanitizer runtime crashed before main in a
 one-line independent puts("asan-ok") program at address 0xffffffffff700450.
 The same failure occurred before every DEADFLASH test body. This is recorded as
 a host runtime incompatibility, not counted as a DEADFLASH pass or failure.
-GCC ASan+UBSan on the same host completed all six tests successfully.
+GCC ASan+UBSan on the same host completed all seven tests successfully.
 
 NOT VALIDATED HERE
 ------------------
 
     MSVC build
-    Windows physical-drive backend
+    Windows physical-drive descriptor query on real hardware
     sacrificial USB unplug and power-cycle behavior
     physical USB performance against Rufus
     bootability of generated media
