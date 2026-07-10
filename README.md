@@ -27,11 +27,13 @@ STATUS
     - Native MBR + FAT32 formatter
     - Deterministic benchmark command
     - Cryptographic operation-plan seals
+    - Safety override policy bound into every plan seal
     - Per-chunk SHA-256 proof manifests
     - Binary Merkle root over all chunk hashes
     - Exact first-mismatching-byte localization
     - GCC, Clang, MSVC, ASan, and UBSan CI definitions
-    - Physical-device qualification still required
+    - GCC, Clang, GCC ASan, and GCC UBSan validated locally
+    - MSVC and physical-device qualification still required
 
 DEADFLASH does not claim full Rufus feature parity. Version 1.0.0 is the
 candidate destructive-storage core. It does not yet perform Windows ISO file
@@ -53,11 +55,12 @@ fault-tested directly:
        `deadflash-proof seal` hashes a canonical operation plan containing the
        source SHA-256, source size, target confirmation token, target geometry,
        verification mode, sample count, buffer size, retry policy, direct-I/O
-       mode, and regular-file truncation policy.
+       mode, regular-file truncation policy, physical-device authorization,
+       mounted-target override, and system-disk override.
 
        `deadflash-proof write --seal HEX` recomputes the complete plan before
-       entering the destructive core. Any changed source, target, or policy
-       rejects the old seal.
+       entering the destructive core. Any changed source, target, safety
+       override, or I/O policy rejects the old seal.
 
     2. CHUNK PROOF
 
@@ -86,8 +89,8 @@ fault-tested directly:
        weaker mode under one generic throughput number.
 
 These are implementation facts and test targets. Overall superiority over
-Rufus remains invalid until raw benchmark files and sacrificial-device fault
-results are published.
+Rufus remains invalid until raw physical-device benchmark files and
+sacrificial-device fault results are published.
 
 BUILD
 -----
@@ -137,23 +140,28 @@ STANDARD VERIFIED WRITE
 ATTESTED WRITE + PROOF
 ----------------------
 
-Generate a seal for the exact image, target, and policy:
+Generate a seal for the exact image, physical target, safety authorization,
+and I/O policy:
 
     deadflash-proof seal image.iso /dev/sdX \
+        --allow-device \
+        --confirm 0123456789abcdef \
         --verify full \
         --buffer 32MiB
 
-Execute only that sealed plan and emit a chunk proof:
+Execute only that sealed plan and emit a chunk proof. The safety flags must be
+identical to the flags used during `seal`:
 
     deadflash-proof write image.iso /dev/sdX \
         --seal 64_HEX_CHARACTER_PLAN_SEAL \
         --allow-device \
         --confirm 0123456789abcdef \
         --verify full \
+        --buffer 32MiB \
         --proof image.dfp \
         --chunk 4MiB
 
-Recheck the proof later:
+Recheck the proof after reconnecting or power-cycling the device:
 
     deadflash-proof verify image.dfp image.iso /dev/sdX
 
@@ -174,7 +182,24 @@ FAT32 FORMAT
 BENCHMARK
 ---------
 
-    deadflash bench target.bin --size 512MiB --runs 5
+Core write/flush/verify collector:
+
+    ./scripts/benchmark-deadflash.sh \
+        ./build/deadflash image.iso target.img 5 full
+
+Plan seal, chunk proof, proof verification, and exact fault localization:
+
+    python3 scripts/benchmark-proof.py \
+        ./build/deadflash-proof image.iso target.img \
+        --runs 5 \
+        --chunk 4MiB \
+        --buffer 32MiB \
+        --fault-offset 1048593
+
+The committed local file-backed sample is under `bench/results/`. Its five
+proof runs all reached `success_proven`; it also injected one bad byte and
+reported the exact same absolute offset. It is a harness validation result,
+not a USB-speed result and not a Rufus comparison.
 
 A Rufus comparison must use the same image, device, USB port, verification
 policy, flush boundary, conditioning, temperature window, and randomized run
@@ -187,9 +212,10 @@ ARCHITECTURE
 flowchart TD
     INPUT[Image + Target + Policy] --> HASH[Source SHA-256]
     HASH --> TARGET[Target Inspection + Geometry Token]
-    TARGET --> SEAL[Canonical Plan SHA-256 Seal]
+    TARGET --> SAFETY[Safety Authorization + Override Flags]
+    SAFETY --> SEAL[Canonical Plan SHA-256 Seal]
     SEAL --> AUTH{Seal Recomputed and Equal?}
-    AUTH -->|No| ABORT[Failed Before Write]
+    AUTH -->|No| ABORT[failed_before_write]
     AUTH -->|Yes| CORE[Raw Write Core]
     CORE --> STREAM[Streaming Source Hash]
     STREAM --> FLUSH[Device Cache Flush]
@@ -209,18 +235,19 @@ it does not provide authenticity without an external signature.
 SAFETY CONTRACT
 ---------------
 
-    1. A physical target requires --allow-device.
-    2. A physical target requires the exact current target token.
-    3. An attested write also requires the exact current plan seal.
-    4. The target is reinspected before the write handle is opened.
-    5. The running system disk is rejected by default.
-    6. Mounted targets are rejected on POSIX systems.
-    7. Windows volumes are locked and dismounted before raw writes.
-    8. Source mutation during the write loop is detected.
-    9. Verified success requires post-flush readback.
-   10. Proven success requires manifest, source, and target agreement.
-   11. Partial-media failure is explicit.
-   12. There is no generic SUCCESS state.
+    1. A physical plan seal requires --allow-device and the live target token.
+    2. A physical write requires the same device authorization and token.
+    3. Dangerous safety overrides are bound into the plan seal.
+    4. An attested write requires the exact current plan seal.
+    5. The target is reinspected before the write handle is opened.
+    6. The running system disk is rejected by default.
+    7. Mounted targets are rejected on POSIX systems.
+    8. Windows volumes are locked and dismounted before raw writes.
+    9. Source mutation during the write loop is detected.
+   10. Verified success requires post-flush readback.
+   11. Proven success requires manifest, source, and target agreement.
+   12. Partial-media failure is explicit.
+   13. There is no generic SUCCESS state.
 
 RESULT STATES
 -------------
@@ -250,7 +277,9 @@ SOURCE TREE
     src/main.c           Standard CLI and benchmark frontend
     src/proof_main.c     Attested-write and proof frontend
     tests/               Hash, pipeline, identity, proof, and fault tests
-    docs/                Architecture, safety, and benchmark contracts
+    scripts/             Core and proof benchmark collectors
+    bench/results/       Raw validation and benchmark records
+    docs/                Architecture, safety, proof, and benchmark contracts
 
 RELEASE GATE
 ------------
@@ -262,6 +291,7 @@ The `v1.0.0` tag must not be created until all of these are true:
     - MSVC build and all tests pass.
     - ASan and UBSan tests pass.
     - Plan-seal mutation tests pass.
+    - Safety-override seal mutation tests pass.
     - Proof corruption and exact-offset tests pass.
     - File-backed evidence JSON parses successfully.
     - Sacrificial USB write, flush, readback, unplug, power-cycle, and
