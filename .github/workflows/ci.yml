@@ -1,9 +1,8 @@
 name: CI
 
 on:
-  push:
-    branches: [main, "agent/**"]
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -28,13 +27,11 @@ jobs:
 
       - name: Select GCC
         if: matrix.compiler == 'gcc'
-        run: |
-          echo "CC=gcc" >> "$GITHUB_ENV"
+        run: echo "CC=gcc" >> "$GITHUB_ENV"
 
       - name: Select Clang
         if: matrix.compiler == 'clang'
-        run: |
-          echo "CC=clang" >> "$GITHUB_ENV"
+        run: echo "CC=clang" >> "$GITHUB_ENV"
 
       - name: Configure
         run: cmake -S . -B build -DDEADFLASH_WARNINGS_AS_ERRORS=ON -DDEADFLASH_BUILD_TESTS=ON
