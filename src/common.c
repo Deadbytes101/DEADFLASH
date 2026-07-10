@@ -69,11 +69,12 @@ uint64_t df_monotonic_ns(void) {
     static BOOL initialized = FALSE;
     LARGE_INTEGER counter;
     if (!initialized) {
-        QueryPerformanceFrequency(&frequency);
+        if (!QueryPerformanceFrequency(&frequency) || frequency.QuadPart <= 0) return 0;
         initialized = TRUE;
     }
-    QueryPerformanceCounter(&counter);
-    return (uint64_t)((counter.QuadPart * 1000000000ULL) / (uint64_t)frequency.QuadPart);
+    if (!QueryPerformanceCounter(&counter) || counter.QuadPart < 0) return 0;
+    return ((uint64_t)counter.QuadPart * 1000000000ULL) /
+           (uint64_t)frequency.QuadPart;
 #else
     struct timespec ts;
     if (clock_gettime(CLOCK_MONOTONIC, &ts) != 0) return 0;
