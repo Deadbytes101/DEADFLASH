@@ -1,6 +1,10 @@
 name: CI
 
 on:
+  push:
+    branches:
+      - main
+      - 'agent/**'
   pull_request:
   workflow_dispatch:
 
@@ -25,6 +29,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
       - name: Select GCC
         if: matrix.compiler == 'gcc'
         run: echo "CC=gcc" >> "$GITHUB_ENV"
@@ -39,35 +47,74 @@ jobs:
       - name: Build
         run: cmake --build build --config Release --parallel
 
-      - name: Test
+      - name: Unit and integration tests
         run: ctest --test-dir build -C Release --output-on-failure
 
-      - name: CLI smoke test
+      - name: CLI and proof end-to-end qualification
         shell: bash
         run: |
           if [[ "${{ runner.os }}" == "Windows" ]]; then
-            ./build/Release/deadflash.exe version
-            ./build/Release/deadflash-proof.exe version
+            DEADFLASH=./build/Release/deadflash.exe
+            PROOF=./build/Release/deadflash-proof.exe
           else
-            ./build/deadflash version
-            ./build/deadflash-proof version
+            DEADFLASH=./build/deadflash
+            PROOF=./build/deadflash-proof
           fi
+          "$DEADFLASH" version
+          "$PROOF" version
+          python scripts/e2e-proof.py \
+            --deadflash "$DEADFLASH" \
+            --proof "$PROOF" \
+            --work-dir e2e-ci \
+            --summary e2e-ci-summary.json
+
+      - name: Upload end-to-end evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-${{ matrix.os }}-${{ matrix.compiler }}
+          path: e2e-ci-summary.json
+          if-no-files-found: error
 
   sanitizer:
     name: ubuntu-latest / gcc-asan-ubsan
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
       - name: Configure ASan and UBSan
         env:
           CC: gcc
           CFLAGS: -fsanitize=address,undefined -fno-omit-frame-pointer
           LDFLAGS: -fsanitize=address,undefined
         run: cmake -S . -B build-san -DDEADFLASH_WARNINGS_AS_ERRORS=ON -DDEADFLASH_BUILD_TESTS=ON
+
       - name: Build
         run: cmake --build build-san --parallel
+
       - name: Test
         env:
           ASAN_OPTIONS: detect_leaks=1:abort_on_error=1
           UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
         run: ctest --test-dir build-san --output-on-failure
+
+      - name: Sanitized end-to-end qualification
+        env:
+          ASAN_OPTIONS: detect_leaks=1:abort_on_error=1
+          UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
+        run: >-
+          python scripts/e2e-proof.py
+          --deadflash build-san/deadflash
+          --proof build-san/deadflash-proof
+          --work-dir e2e-san
+          --summary e2e-san-summary.json
+
+      - name: Upload sanitizer evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-ubuntu-gcc-sanitized
+          path: e2e-san-summary.json
+          if-no-files-found: error
