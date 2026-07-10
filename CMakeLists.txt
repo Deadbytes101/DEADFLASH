@@ -33,6 +33,8 @@ add_library(deadflash_core STATIC
     src/pipeline.c
     src/fat32.c
     src/report.c
+    src/attest.c
+    src/proof.c
 )
 
 target_include_directories(deadflash_core PUBLIC include)
@@ -45,6 +47,10 @@ deadflash_enable_warnings(deadflash_core)
 add_executable(deadflash src/main.c)
 target_link_libraries(deadflash PRIVATE deadflash_core)
 deadflash_enable_warnings(deadflash)
+
+add_executable(deadflash-proof src/proof_main.c)
+target_link_libraries(deadflash-proof PRIVATE deadflash_core)
+deadflash_enable_warnings(deadflash-proof)
 
 if(DEADFLASH_BUILD_TESTS)
     enable_testing()
@@ -68,6 +74,16 @@ if(DEADFLASH_BUILD_TESTS)
     target_link_libraries(test_identity PRIVATE deadflash_core)
     deadflash_enable_warnings(test_identity)
     add_test(NAME identity COMMAND test_identity)
+
+    add_executable(test_attest tests/test_attest.c)
+    target_link_libraries(test_attest PRIVATE deadflash_core)
+    deadflash_enable_warnings(test_attest)
+    add_test(NAME attest COMMAND test_attest)
+
+    add_executable(test_proof tests/test_proof.c)
+    target_link_libraries(test_proof PRIVATE deadflash_core)
+    deadflash_enable_warnings(test_proof)
+    add_test(NAME proof COMMAND test_proof)
 endif()
 
-install(TARGETS deadflash RUNTIME DESTINATION bin)
+install(TARGETS deadflash deadflash-proof RUNTIME DESTINATION bin)
