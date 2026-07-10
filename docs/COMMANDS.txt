@@ -1,0 +1,31 @@
+DEADFLASH COMMAND MAP
+=====================
+
+STANDARD CORE
+-------------
+
+    deadflash inspect TARGET
+    deadflash plan IMAGE TARGET
+    deadflash write IMAGE TARGET [OPTIONS]
+    deadflash verify IMAGE TARGET [OPTIONS]
+    deadflash format-fat32 TARGET [OPTIONS]
+    deadflash verify-fat32 TARGET
+    deadflash bench TARGET [OPTIONS]
+
+ATTESTED PROOF CORE
+-------------------
+
+    deadflash-proof seal IMAGE TARGET [OPTIONS]
+    deadflash-proof write IMAGE TARGET --seal HEX [OPTIONS]
+    deadflash-proof manifest IMAGE PROOF [--chunk SIZE]
+    deadflash-proof verify PROOF IMAGE TARGET
+
+RECOMMENDED PHYSICAL FLOW
+-------------------------
+
+    1. deadflash inspect TARGET
+    2. deadflash-proof seal IMAGE TARGET --verify full --buffer 32MiB
+    3. deadflash-proof write IMAGE TARGET --seal HEX --allow-device
+       --confirm TOKEN --verify full --proof IMAGE.dfp --chunk 4MiB
+    4. Power-cycle or reconnect the device.
+    5. deadflash-proof verify IMAGE.dfp IMAGE TARGET
