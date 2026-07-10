@@ -61,6 +61,7 @@ int main(void) {
                                 &target_info, &result, &error) !=
         DF_ERR_CONFIRMATION)
         return 7;
+    if (strcmp(result.final_state, "failed_before_write") != 0) return 11;
 
     if (df_write_image_attested(source, target, &options, first.plan_hex,
                                 &target_info, &result, &error) != DF_OK)
