@@ -1,0 +1,17 @@
+IMPLEMENTED EDGE
+================
+
+DEADFLASH 1.0.0 candidate is intentionally not broader than Rufus.
+Its implemented technical edge is narrower:
+
+    authorize exact write plan
+    reject stale plan before raw writer
+    hash bytes during write
+    flush before verification
+    emit versioned evidence
+    prove chunks with SHA-256 and Merkle root
+    locate first wrong byte
+    retain raw benchmark and fault records
+
+Every line above maps to source and tests. Anything else belongs in the
+unimplemented matrix, not release marketing.
