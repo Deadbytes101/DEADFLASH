@@ -17,16 +17,26 @@ IMPLEMENTED IN 1.0.0 CANDIDATE
         Pre-write SHA-256 plus SHA-256 over the exact source bytes submitted to
         the writer.
 
+    HARDWARE FINGERPRINT TOKEN V2
+        Binds path, type, capacity, sector geometry, safety classification,
+        bus/vendor/product/revision, and SHA-256 of hardware serial when exposed.
+        Reports SERIAL_BOUND, DESCRIPTOR_BOUND, or GEOMETRY_ONLY explicitly.
+
+    SERIAL PRIVACY
+        Raw hardware serial text is neither printed nor stored. Only SHA-256 is
+        used in target authorization and evidence.
+
     TARGET STALE-PLAN GUARD
-        Target geometry and safety classification reduced to a confirmation
-        token and reinspected before write access.
+        The live target fingerprint is reduced to a confirmation token and
+        recomputed before write access.
 
     OPERATION PLAN SEAL
-        SHA-256 over source identity, target identity, and write policy.
+        SHA-256 over source identity, target fingerprint, write policy, and
+        dangerous safety overrides.
 
     ATTESTED WRITE
         Recomputes the plan seal before calling the raw writer and rejects a
-        stale or changed plan.
+        stale source, target, safety policy, or I/O policy.
 
     CACHE-FLUSH BOUNDARY
         Explicit fsync or FlushFileBuffers before readback success.
@@ -45,13 +55,18 @@ IMPLEMENTED IN 1.0.0 CANDIDATE
         Reports the first absolute bad byte when source and target are present.
 
     EVIDENCE JSON
-        Versioned result record with timings, counts, hashes, state, and error.
+        Versioned result record with identity strength, hashed serial,
+        configuration, timings, counts, hashes, state, and error.
 
     NATIVE FAT32
         MBR plus FAT32 metadata for supported 512-byte-sector targets.
 
     REPRODUCIBLE BENCHMARK CONTRACT
         Separates write, flush, verify, proof, and corruption-location costs.
+
+    PHYSICAL USB QUALIFICATION HARNESS
+        Fail-closed baseline, unplug, reconnect, and power-cycle record capture.
+        The harness exists; physical pass records are still required.
 
 NOT IMPLEMENTED IN 1.0.0 CANDIDATE
 ----------------------------------
@@ -67,17 +82,18 @@ NOT IMPLEMENTED IN 1.0.0 CANDIDATE
     UEFI boot validation
     ISO download service
     Bad-block destructive scan
-    Fake-capacity qualification
+    Fake-capacity automatic detection
     IOCP queued write engine
     Hardware-backed proof signatures
+    Platform device-instance identity independent of target path
 
 COMPETITIVE CLAIM RULE
 ----------------------
 
 DEADFLASH may be described as stronger than Rufus only for an implemented,
 tested, equally configured axis. The current intended edge is auditability:
-plan-bound authorization, explicit result states, chunk proof, and exact
-corruption location.
+hardware-bound target authorization when descriptors exist, plan-bound policy,
+explicit result states, chunk proof, and exact corruption location.
 
 No row in the unimplemented section may appear in marketing, screenshots, or
 release notes as though it exists.
