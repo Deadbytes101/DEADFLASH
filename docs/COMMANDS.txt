@@ -24,8 +24,12 @@ RECOMMENDED PHYSICAL FLOW
 -------------------------
 
     1. deadflash inspect TARGET
-    2. deadflash-proof seal IMAGE TARGET --verify full --buffer 32MiB
+    2. deadflash-proof seal IMAGE TARGET --allow-device --confirm TOKEN
+       --verify full --buffer 32MiB
     3. deadflash-proof write IMAGE TARGET --seal HEX --allow-device
        --confirm TOKEN --verify full --proof IMAGE.dfp --chunk 4MiB
     4. Power-cycle or reconnect the device.
     5. deadflash-proof verify IMAGE.dfp IMAGE TARGET
+
+The same safety overrides must be present during `seal` and `write`. Changing
+--force-mounted or --force-system-disk changes the plan seal.
