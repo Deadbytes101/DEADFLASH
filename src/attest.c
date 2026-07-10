@@ -68,6 +68,21 @@ df_status df_attest_plan(const char *source_path, const char *target_path,
     if (status != DF_OK) goto out;
     status = df_inspect_target(target_path, &attestation->target, error);
     if (status != DF_OK) goto out;
+    if (attestation->target.kind != DF_TARGET_REGULAR_FILE) {
+        if (!options.allow_device) {
+            df_error_set(error, DF_ERR_DEVICE_REQUIRED, 0,
+                         "physical plan seal requires --allow-device");
+            status = DF_ERR_DEVICE_REQUIRED;
+            goto out;
+        }
+        if (options.confirmation_token == NULL ||
+            strcmp(options.confirmation_token, attestation->target.token) != 0) {
+            df_error_set(error, DF_ERR_CONFIRMATION, 0,
+                         "physical plan seal requires the current target token");
+            status = DF_ERR_CONFIRMATION;
+            goto out;
+        }
+    }
 
     df_hex_encode(attestation->source_sha256, 32u, source_hex);
     written = snprintf(canonical, sizeof(canonical),
@@ -84,7 +99,10 @@ df_status df_attest_plan(const char *source_path, const char *target_path,
                        "buffer_size=%zu\n"
                        "write_retries=%u\n"
                        "direct_io=%u\n"
-                       "truncate_regular_file=%u\n",
+                       "truncate_regular_file=%u\n"
+                       "allow_device=%u\n"
+                       "force_mounted=%u\n"
+                       "force_system_disk=%u\n",
                        attestation->source_size, source_hex,
                        attestation->target.token,
                        (unsigned)attestation->target.kind,
@@ -96,7 +114,10 @@ df_status df_attest_plan(const char *source_path, const char *target_path,
                        options.buffer_size,
                        options.write_retries,
                        options.direct_io ? 1u : 0u,
-                       options.truncate_regular_file ? 1u : 0u);
+                       options.truncate_regular_file ? 1u : 0u,
+                       options.allow_device ? 1u : 0u,
+                       options.force_mounted ? 1u : 0u,
+                       options.force_system_disk ? 1u : 0u);
     if (written < 0 || (size_t)written >= sizeof(canonical)) {
         df_error_set(error, DF_ERR_INTERNAL, 0,
                      "canonical plan exceeded fixed buffer");
