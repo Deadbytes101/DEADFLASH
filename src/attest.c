@@ -125,6 +125,12 @@ df_status df_write_image_attested(const char *source_path,
     df_status status;
 
     df_error_clear(error);
+    if (result != NULL) {
+        memset(result, 0, sizeof(*result));
+        (void)snprintf(result->final_state, sizeof(result->final_state),
+                       "failed_before_write");
+    }
+    if (target_info != NULL) memset(target_info, 0, sizeof(*target_info));
     if (options_in == NULL || expected_plan_hex == NULL || result == NULL) {
         df_error_set(error, DF_ERR_INVALID_ARGUMENT, 0,
                      "attested write requires options, plan seal, and result");
