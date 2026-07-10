@@ -27,18 +27,20 @@ function Import-VcVars64 {
         (Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\vswhere.exe'),
         (Join-Path $env:ProgramFiles 'Microsoft Visual Studio\Installer\vswhere.exe')
     ) | Where-Object { $_ -and (Test-Path $_ -PathType Leaf) }
+    $vswhereCandidates = @($vswhereCandidates)
 
     if ($vswhereCandidates.Count -eq 0) {
         throw 'cl.exe is not in PATH and vswhere.exe was not found.'
     }
 
     $vswhere = $vswhereCandidates[0]
-    $installationPath = (& $vswhere -latest -products * `
+    $installationPathRaw = & $vswhere -latest -products * `
         -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 `
-        -property installationPath | Select-Object -First 1).Trim()
-    if ([string]::IsNullOrWhiteSpace($installationPath)) {
+        -property installationPath | Select-Object -First 1
+    if ([string]::IsNullOrWhiteSpace($installationPathRaw)) {
         throw 'No Visual Studio installation with the x64 C++ toolchain was found.'
     }
+    $installationPath = $installationPathRaw.Trim()
 
     $vcvars = Join-Path $installationPath 'VC\Auxiliary\Build\vcvars64.bat'
     if (-not (Test-Path $vcvars -PathType Leaf)) {
@@ -139,6 +141,9 @@ $script:Record = [ordered]@{
     source_dir = $SourceDir
     build_dir = $BuildDir
     evidence_path = $evidencePath
+    cmake_generator = 'Visual Studio 17 2022'
+    cmake_architecture = 'x64'
+    expected_tests = 7
     host = [ordered]@{
         computer_name = $env:COMPUTERNAME
         os_description = [System.Runtime.InteropServices.RuntimeInformation]::OSDescription
@@ -181,7 +186,8 @@ try {
         -WorkingDirectory $SourceDir -AcceptedExitCodes @(0, 2) | Out-Null
 
     Invoke-Recorded -Name 'cmake-configure' -FilePath 'cmake.exe' `
-        -Arguments @('-S', $SourceDir, '-B', $BuildDir, '-A', 'x64',
+        -Arguments @('-S', $SourceDir, '-B', $BuildDir,
+                     '-G', 'Visual Studio 17 2022', '-A', 'x64',
                      '-DDEADFLASH_WARNINGS_AS_ERRORS=ON',
                      '-DDEADFLASH_BUILD_TESTS=ON') `
         -WorkingDirectory $SourceDir | Out-Null
@@ -193,10 +199,15 @@ try {
     $ctest = Invoke-Recorded -Name 'ctest' -FilePath 'ctest.exe' `
         -Arguments @('--test-dir', $BuildDir, '-C', 'Release', '--output-on-failure') `
         -WorkingDirectory $SourceDir
+    $testsPassed = $ctest.stdout -match '100% tests passed' -and
+                   $ctest.stdout -match '0 tests failed out of 7'
     $script:Record.tests = [ordered]@{
         expected = 7
-        passed = if ($ctest.stdout -match '100% tests passed') { 7 } else { $null }
+        passed = if ($testsPassed) { 7 } else { $null }
         raw_summary = ($ctest.stdout -split "`r?`n" | Where-Object { $_ -match 'tests passed|Total Test time' })
+    }
+    if (-not $testsPassed) {
+        throw 'CTest exited successfully but did not report all seven tests passing.'
     }
 
     $deadflash = Join-Path $BuildDir 'Release\deadflash.exe'
