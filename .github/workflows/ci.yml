@@ -75,6 +75,16 @@ jobs:
           path: e2e-ci-summary.json
           if-no-files-found: error
 
+  win32-api-surface:
+    name: ubuntu-latest / clang-win32-api-surface
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check all _WIN32 conditional source paths
+        env:
+          CC: clang
+        run: bash scripts/check-win32-surface.sh
+
   sanitizer:
     name: ubuntu-latest / gcc-asan-ubsan
     runs-on: ubuntu-latest
