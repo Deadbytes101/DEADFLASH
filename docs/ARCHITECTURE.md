@@ -6,107 +6,240 @@ VERSION: 1.0.0 CANDIDATE
 DESIGN GOAL
 -----------
 
-DEADFLASH separates planning, authorization, execution, and verification.
-No frontend owns destructive policy. The raw-device path lives in the core
-library and receives an explicit operation configuration.
+DEADFLASH separates planning, authorization, execution, verification, and
+proof. No frontend owns destructive policy. The raw-device path lives in the
+core library and receives an explicit operation configuration.
 
-CURRENT PIPELINE
-----------------
+The competitive target is deliberately narrow:
+
+    BEAT RUFUS IN AUDITABLE WRITE AUTHORIZATION AND POST-WRITE PROOF.
+
+This is not a feature-count claim. Rufus remains substantially broader as a
+boot-media creator. DEADFLASH earns the claim above only when the same image,
+device, port, flush boundary, and correctness policy are benchmarked and the
+raw result files are published.
+
+IMPLEMENTED CONTROL FLOW
+------------------------
 
 ```mermaid
-flowchart LR
-    A[Source Image] --> B[Pre-write SHA-256]
-    B --> C[Target Plan]
-    C --> D[Target Plan Recheck]
-    D --> E[Volume Lock / Dismount]
-    E --> F[Aligned Write + Streaming Source Hash]
-    F --> G{Stream Hash Matches Pre-hash?}
-    G -->|No| X[Partial-media Failure]
-    G -->|Yes| H[Flush Barrier]
-    H --> I{Verification Mode}
-    I -->|None| J[Evidence Report]
-    I -->|Sample| K[Deterministic Readback]
-    I -->|Full| L[Full Target SHA-256]
-    K --> J
-    L --> J
+flowchart TD
+    A[Source Image] --> B[Full Source SHA-256]
+    C[Target Path] --> D[Target Geometry + Safety Classification]
+    E[Write Policy] --> F[Verify Mode + Buffer + Retry + Direct I/O]
+    B --> G[Canonical Operation Record]
+    D --> G
+    F --> G
+    G --> H[SHA-256 Plan Seal]
+    H --> I{Recomputed Seal Equal?}
+    I -->|No| X[failed_before_write]
+    I -->|Yes| J[Core Target Reinspection]
+    J --> K{Target Token Equal?}
+    K -->|No| X
+    K -->|Yes| L[Lock / Dismount]
+    L --> M[Aligned Raw Write]
+    M --> N[Streaming Source SHA-256]
+    N --> O{Written Source Hash Equal to Plan?}
+    O -->|No| P[plan_breach_partial_media]
+    O -->|Yes| Q[Flush Barrier]
+    Q --> R[Full or Sample Readback]
+    R --> S[JSON Evidence]
+    R --> T[Chunk SHA-256 Manifest]
+    T --> U[Binary Merkle Root]
+    U --> V[Source + Target Chunk Readback]
+    V -->|Equal| W[success_proven]
+    V -->|Different| Y[First Bad Chunk + Exact Byte Offset]
 ```
 
-This diagram describes implemented control flow. It is not a roadmap and does
-not imply a performance or reliability advantage over another program.
+Every node above exists in the candidate source tree. The diagram is not a
+roadmap and does not imply hardware qualification that has not been run.
+
+OPERATION PLAN ATTESTATION
+--------------------------
+
+`df_attest_plan` creates a canonical text record and hashes it with SHA-256.
+The record binds all fields that can change the meaning or correctness of the
+write:
+
+    - Source byte length
+    - Full source SHA-256
+    - Current target confirmation token
+    - Target kind and byte capacity
+    - Logical and physical sector sizes
+    - Verification mode
+    - Deterministic sample count
+    - I/O buffer size
+    - Write retry count
+    - Direct-I/O policy
+    - Regular-file truncation policy
+
+`deadflash-proof write --seal HEX` recomputes the plan from live state. A stale
+seal fails before the destructive core is called.
+
+The raw writer also returns the SHA-256 of the exact unpadded source bytes that
+flowed through its write loop. The attested wrapper compares that hash with the
+hash authorized by the plan. A disagreement can never be reported as success;
+it becomes `plan_breach_partial_media` because media may already contain a
+partial or unauthorized stream.
+
+The plan seal is not a digital signature. Anyone who can replace the program
+or trusted seal can generate another seal. Its purpose is exact stale-plan and
+policy-change detection, not identity authentication.
+
+PROOF MANIFEST
+--------------
+
+`df_proof_create` splits the source into fixed-size chunks. The default is
+4 MiB. For each chunk it stores:
+
+    chunk index
+    exact byte length
+    SHA-256 digest
+
+It also stores the full source SHA-256 and a binary Merkle root over all chunk
+hashes. Parent nodes are domain-separated from leaf hashes by a leading 0x01
+byte. An odd final child is duplicated at its level.
+
+```mermaid
+flowchart BT
+    C0[Chunk 0 SHA-256] --> P0[Parent 0]
+    C1[Chunk 1 SHA-256] --> P0
+    C2[Chunk 2 SHA-256] --> P1[Parent 1]
+    C3[Chunk 3 SHA-256] --> P1
+    P0 --> ROOT[Merkle Root]
+    P1 --> ROOT
+```
+
+The Merkle root is a compact integrity summary. It is not an authenticity
+proof unless the root is stored or signed by an external trusted system.
+DEADFLASH does not pretend otherwise.
+
+EXACT MISMATCH LOCALIZATION
+---------------------------
+
+A whole-image digest reports only that two images differ. The proof verifier
+first validates source identity against the manifest, then compares source and
+target chunk digests. When a target chunk differs, it byte-compares only that
+chunk and reports the first exact bad byte offset.
+
+This makes corruption evidence operationally useful:
+
+    target_mismatch
+    first_bad_chunk  = N
+    first_bad_offset = absolute byte offset
+    expected_chunk_sha256
+    actual_chunk_sha256
+
+Exact localization requires the original source image. A hash manifest alone
+cannot reconstruct the expected byte value, and DEADFLASH does not claim that
+it can.
 
 COMPONENTS
 ----------
 
 COMMON
 
-    Owns portable status codes, bounded error strings, monotonic timing,
-    size parsing, constant-time byte comparison, and aligned allocation.
+    Portable status codes, bounded errors, monotonic timing, size parsing,
+    constant-time comparisons, and aligned allocation.
 
 SHA256
 
-    A dependency-free SHA-256 implementation. The source image is hashed
-    before the first destructive operation. The write loop hashes the exact
-    unpadded source bytes submitted to the target. A mismatch between the two
-    hashes aborts the operation as a changed source.
+    Dependency-free SHA-256 used for source identity, write-stream identity,
+    target verification, plan seals, chunk digests, and Merkle parents.
 
-DEVICE / I/O
+DEVICE
 
-    Discovers target geometry and classification. Physical-device writes
-    require an explicit allow flag and a target-plan token. The current target
-    plan is checked again immediately before opening the target for write
-    access.
+    Target geometry, classification, confirmation token, system-disk guard,
+    mount detection, raw handles, volume locking, explicit-offset I/O, flush,
+    and identity reinspection.
 
-    The token currently covers path, target kind, size, logical and physical
-    sector sizes, read-only state, and system-disk classification. It is not a
-    cryptographic device certificate and does not yet include hardware serial,
-    VID/PID, or a platform device-instance identifier.
+PIPELINE
 
-    POSIX uses pread/pwrite/fsync. Linux block geometry is queried through
-    BLKGETSIZE64, BLKSSZGET, BLKPBSZGET, and BLKROGET.
+    Pre-hash, aligned write, retry, streaming source hash, flush, and full or
+    deterministic sampled readback.
 
-    Windows uses CreateFile, IOCTL_DISK_GET_LENGTH_INFO, volume disk extents,
-    FSCTL_LOCK_VOLUME, FSCTL_DISMOUNT_VOLUME, explicit-offset reads/writes,
-    and FlushFileBuffers.
+ATTEST
 
-VERIFY
+    Canonical plan creation, SHA-256 plan seal, live-state recomputation, seal
+    enforcement, and post-write comparison against the authorized source hash.
 
-    Full verification hashes the exact source-length region of the target after
-    flush and write-handle close. Sample verification always reads the first
-    and exact final source blocks plus deterministic source-hash-seeded blocks.
+PROOF
+
+    Chunk manifest parser/writer, Merkle construction and validation, source
+    identity enforcement, target readback, and exact mismatch localization.
 
 FAT32
 
-    Creates an MBR with one LBA FAT32 partition, a FAT32 BPB, FSInfo sectors,
-    backup boot data, two FATs, and a root volume-label entry. It supports
-    512-byte logical sectors and MBR-sized targets up to 2 TiB.
+    MBR, FAT32 BPB, FSInfo, backup boot data, two FATs, and root volume label.
+    Candidate support is limited to 512-byte logical sectors and MBR-sized
+    targets up to 2 TiB.
 
 EVIDENCE
 
-    Reports use schema `deadflash.evidence.v1`. Reports preserve target
-    geometry, safety classification, configuration, timings, byte counts,
-    verification state, hashes, retry counts, and errors.
+    Schema `deadflash.evidence.v1` records target geometry, policy, timings,
+    byte counts, verification state, hashes, retries, and errors.
 
-INVARIANTS
-----------
+HARD INVARIANTS
+---------------
 
+    - Physical writes require explicit device permission.
+    - Physical writes require the live target token.
+    - Attested writes require a seal over the live source, target, and policy.
     - Source and target I/O use explicit offsets.
     - Short reads and short writes are failures.
-    - Target-plan changes abort before opening the write handle.
-    - Source changes during the write stream are detected before success.
-    - A physical target is never silently inferred from a drive letter.
-    - A verification mismatch can never produce success_verified.
-    - Full verification is performed after the target cache is flushed.
+    - Target changes abort before the write handle is opened.
+    - Source changes cannot produce verified or proven success.
+    - Full verification occurs after flush and write-handle close.
+    - Proof success requires manifest, source, and target agreement.
+    - Manifest structure and Merkle root are validated before target proof.
+    - A mismatch reports an exact byte offset when the source is available.
     - Unsupported geometry fails closed.
+    - There is no generic SUCCESS state.
+
+MEASURABLE ADVANTAGE CONTRACT
+-----------------------------
+
+DEADFLASH may claim an advantage over Rufus only for a metric that is measured
+under equal correctness requirements.
+
+Required proof-oriented metrics:
+
+    plan_seal_ms
+    source_hash_ms
+    write_ms
+    flush_ms
+    readback_verify_ms
+    proof_create_ms
+    proof_verify_ms
+    mismatch_localization_ms
+    first_bad_offset_accuracy
+    peak_working_set_bytes
+    cpu_user_ms
+    cpu_kernel_ms
+
+A run is disqualified if either tool writes a different image, skips the flush
+boundary, uses weaker verification, or reports success after injected
+corruption.
 
 KNOWN BOUNDARIES
 ----------------
 
     - The v1.0 pipeline is synchronous, not an IOCP queue-depth engine.
-    - The target-plan token does not yet bind to hardware serial/VID/PID.
-    - FAT32 formatting supports 512-byte sectors only.
-    - GPT, exFAT, NTFS creation, ISO extraction, WIM splitting, and boot
-      emulation are outside this release.
-    - Physical hardware validation must be performed on a sacrificial matrix
-      before treating either raw-device backend as production-qualified.
-    - No claim of superiority over Rufus is valid without the published
-      benchmark protocol and raw result files.
+    - The target token does not yet bind hardware serial, VID/PID, or platform
+      device-instance ID.
+    - Plan seals are hashes, not signatures.
+    - Merkle roots provide integrity summaries, not identity authentication.
+    - Proof generation stores one 32-byte digest per chunk in memory.
+    - Exact byte localization requires the original source image.
+    - FAT32 formatting supports 512-byte logical sectors only.
+    - GPT, exFAT, NTFS creation, ISO extraction, WIM splitting, persistence,
+      Windows To Go, and boot emulation are outside this candidate.
+    - Physical hardware validation must run on sacrificial media before the raw
+      backends are production-qualified.
+
+NO MAGIC
+--------
+
+No atomic USB transaction is claimed. Once the first sector is written, power
+loss or unplug can leave partial media. DEADFLASH records that truth explicitly
+instead of renaming it success.
