@@ -10,27 +10,51 @@ UNIT / FILE-BACKED
     target_corruption_detection
     fat32_layout_and_structure
     target_identity_change
+    target_fingerprint_deterministic
+    target_descriptor_change_invalidates_token
+    target_serial_hash_change_invalidates_token
     plan_seal_deterministic
     plan_seal_policy_change
+    plan_seal_safety_override_change
     plan_seal_wrong_value_rejected
     proof_manifest_round_trip
     proof_target_corruption
     proof_exact_bad_offset
     proof_source_identity_change
+    cross_platform_e2e_proof_flow
+
+COMPILE / TOOLCHAIN SURFACE
+---------------------------
+
+    gcc_strict_c17
+    clang_strict_c17
+    gcc_asan_ubsan
+    win32_conditional_api_surface
+    msvc_strict_c17
+
+The Win32 surface test compiles every `_WIN32` conditional source path against
+minimal API declarations with Clang warnings-as-errors. It catches conditional
+compilation and API type mistakes, but it does not replace the Windows SDK,
+linking, execution, ABI validation, or the MSVC row.
 
 PHYSICAL / MANUAL RELEASE QUALIFICATION
 ---------------------------------------
 
     wrong_device_token
+    hardware_descriptor_change
+    serial_hash_change
+    geometry_only_identity_warning
     mounted_target
     system_disk
     write_protected_target
-    unplug_during_write
+    unplug_during_early_write
+    unplug_during_late_write
     unplug_during_flush
     unplug_during_verify
+    reconnect_then_proof
     power_cycle_then_proof
-    bridge_identity_change
     fake_capacity_target
 
-Only the unit/file-backed matrix is suitable for ordinary hosted CI. Physical
-qualification records belong in bench/results and the release evidence issue.
+Only the unit/file-backed and compile-surface matrices are suitable for ordinary
+hosted CI. Physical qualification records belong under `bench/hardware/` and in
+the release evidence issue. Failed physical runs must be retained.
