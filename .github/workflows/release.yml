@@ -1,0 +1,71 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            artifact: deadflash-linux-x64
+            binary: build/deadflash
+          - os: windows-latest
+            artifact: deadflash-windows-x64
+            binary: build/Release/deadflash.exe
+
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure
+        run: cmake -S . -B build -DDEADFLASH_WARNINGS_AS_ERRORS=ON -DDEADFLASH_BUILD_TESTS=ON
+
+      - name: Build
+        run: cmake --build build --config Release --parallel
+
+      - name: Test
+        run: ctest --test-dir build -C Release --output-on-failure
+
+      - name: Stage artifact
+        shell: bash
+        run: |
+          mkdir -p dist
+          cp '${{ matrix.binary }}' 'dist/${{ matrix.artifact }}${{ runner.os == 'Windows' && '.exe' || '' }}'
+          cp README.md CHANGELOG.md LICENSE dist/
+
+      - name: Archive Linux
+        if: runner.os == 'Linux'
+        run: tar -C dist -czf ${{ matrix.artifact }}.tar.gz .
+
+      - name: Archive Windows
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: Compress-Archive -Path dist\* -DestinationPath '${{ matrix.artifact }}.zip'
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: |
+            ${{ matrix.artifact }}.tar.gz
+            ${{ matrix.artifact }}.zip
+          if-no-files-found: error
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create '${{ github.ref_name }}' artifacts/**/* --verify-tag --generate-notes
