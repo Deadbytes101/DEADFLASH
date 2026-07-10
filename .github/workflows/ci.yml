@@ -47,8 +47,10 @@ jobs:
         run: |
           if [[ "${{ runner.os }}" == "Windows" ]]; then
             ./build/Release/deadflash.exe version
+            ./build/Release/deadflash-proof.exe version
           else
             ./build/deadflash version
+            ./build/deadflash-proof version
           fi
 
   sanitizer:
