@@ -22,7 +22,8 @@ STATUS
     - Streaming hash of the exact bytes submitted to the writer
     - Full or deterministic sampled readback verification
     - Versioned JSON evidence reports
-    - Physical-device confirmation tokens
+    - Hardware-bound physical-device confirmation tokens
+    - Privacy-preserving serial SHA-256 instead of raw serial disclosure
     - Mounted-target and system-disk guards
     - Native MBR + FAT32 formatter
     - Deterministic benchmark command
@@ -32,7 +33,7 @@ STATUS
     - Binary Merkle root over all chunk hashes
     - Exact first-mismatching-byte localization
     - GCC, Clang, MSVC, ASan, and UBSan CI definitions
-    - GCC, Clang, GCC ASan, and GCC UBSan validated locally
+    - GCC, Clang, GCC ASan, and GCC UBSan validated locally: 7/7
     - MSVC and physical-device qualification still required
 
 DEADFLASH does not claim full Rufus feature parity. Version 1.0.0 is the
@@ -50,38 +51,50 @@ That statement is not a claim that DEADFLASH is the better all-purpose boot
 media tool. It means the following implemented properties can be measured and
 fault-tested directly:
 
-    1. PLAN SEAL
+    1. HARDWARE-BOUND TARGET TOKEN
+
+       `deadflash inspect` computes target token v2 from the target path, kind,
+       capacity, logical and physical sector sizes, read-only/system-disk state,
+       bus, vendor, product, revision, and SHA-256 of the hardware serial when
+       the device exposes one.
+
+       Raw serial text is never printed or stored. The CLI and JSON evidence
+       explicitly report SERIAL_BOUND, DESCRIPTOR_BOUND, or GEOMETRY_ONLY so a
+       weak bridge identity is never represented as strong identity.
+
+    2. PLAN SEAL
 
        `deadflash-proof seal` hashes a canonical operation plan containing the
-       source SHA-256, source size, target confirmation token, target geometry,
+       source SHA-256, source size, hardware-bound target token, target geometry,
        verification mode, sample count, buffer size, retry policy, direct-I/O
        mode, regular-file truncation policy, physical-device authorization,
        mounted-target override, and system-disk override.
 
        `deadflash-proof write --seal HEX` recomputes the complete plan before
-       entering the destructive core. Any changed source, target, safety
-       override, or I/O policy rejects the old seal.
+       entering the destructive core. Any changed source, target fingerprint,
+       safety override, or I/O policy rejects the old seal.
 
-    2. CHUNK PROOF
+    3. CHUNK PROOF
 
        `deadflash-proof manifest` records the SHA-256 of every source chunk,
        the full source SHA-256, and a binary Merkle root. The root is an
        integrity summary, not a signature or authenticity certificate.
 
-    3. EXACT DAMAGE LOCATION
+    4. EXACT DAMAGE LOCATION
 
        `deadflash-proof verify` validates the manifest, verifies source
        identity, compares every source/target chunk, and reports the first
        mismatching byte offset. A plain whole-image hash can say that data is
        wrong; this path also says where the first wrong byte is.
 
-    4. NO FALSE VERIFIED SUCCESS
+    5. NO FALSE VERIFIED SUCCESS
 
-       Plan-seal mismatch, source mutation, short write, flush failure,
-       readback mismatch, and proof mismatch all produce distinct failure
-       states. None may become `success_verified` or `success_proven`.
+       Plan-seal mismatch, target-fingerprint change, source mutation, short
+       write, flush failure, readback mismatch, and proof mismatch all produce
+       distinct failure states. None may become `success_verified` or
+       `success_proven`.
 
-    5. REPRODUCIBLE COST
+    6. REPRODUCIBLE COST
 
        The benchmark contract measures write, flush, verification, proof
        creation, proof verification, mismatch localization, CPU, and memory
@@ -125,8 +138,11 @@ Windows:
     deadflash list
     deadflash inspect \\.\PhysicalDrive3
 
-The inspection token is a stale-target guard. It is not a cryptographic
-hardware certificate.
+Inspection prints the current identity strength, bus/vendor/product/revision,
+a SHA-256 of the serial when available, and a short confirmation token. The
+short token is a stale-target guard, not a digital certificate. A bridge that
+exposes no useful descriptor is reported as GEOMETRY_ONLY and must be treated
+with greater operator caution.
 
 STANDARD VERIFIED WRITE
 -----------------------
@@ -196,10 +212,12 @@ Plan seal, chunk proof, proof verification, and exact fault localization:
         --buffer 32MiB \
         --fault-offset 1048593
 
-The committed local file-backed sample is under `bench/results/`. Its five
-proof runs all reached `success_proven`; it also injected one bad byte and
-reported the exact same absolute offset. It is a harness validation result,
-not a USB-speed result and not a Rufus comparison.
+The committed target-token-v2 file-backed sample is under `bench/results/`.
+Its five proof runs all reached `success_proven`. Current medians are 56.819 ms
+for plan sealing, 106.908 ms for proof creation, and 159.016 ms for proof
+verification on a 6,291,579-byte image. One injected bad byte was reported at
+the exact same absolute offset. This is a harness validation result, not a
+USB-speed result and not a Rufus comparison.
 
 A Rufus comparison must use the same image, device, USB port, verification
 policy, flush boundary, conditioning, temperature window, and randomized run
@@ -211,12 +229,15 @@ ARCHITECTURE
 ```mermaid
 flowchart TD
     INPUT[Image + Target + Policy] --> HASH[Source SHA-256]
-    HASH --> TARGET[Target Inspection + Geometry Token]
-    TARGET --> SAFETY[Safety Authorization + Override Flags]
+    HASH --> TARGET[Hardware Descriptor + Geometry + Serial Hash]
+    TARGET --> TOKEN[Target Token v2]
+    TOKEN --> SAFETY[Safety Authorization + Override Flags]
     SAFETY --> SEAL[Canonical Plan SHA-256 Seal]
     SEAL --> AUTH{Seal Recomputed and Equal?}
     AUTH -->|No| ABORT[failed_before_write]
-    AUTH -->|Yes| CORE[Raw Write Core]
+    AUTH -->|Yes| RECHECK[Live Hardware Fingerprint Recheck]
+    RECHECK -->|Changed| ABORT
+    RECHECK -->|Equal| CORE[Raw Write Core]
     CORE --> STREAM[Streaming Source Hash]
     STREAM --> FLUSH[Device Cache Flush]
     FLUSH --> VERIFY[Full / Sample Readback]
@@ -235,19 +256,22 @@ it does not provide authenticity without an external signature.
 SAFETY CONTRACT
 ---------------
 
-    1. A physical plan seal requires --allow-device and the live target token.
-    2. A physical write requires the same device authorization and token.
-    3. Dangerous safety overrides are bound into the plan seal.
-    4. An attested write requires the exact current plan seal.
-    5. The target is reinspected before the write handle is opened.
-    6. The running system disk is rejected by default.
-    7. Mounted targets are rejected on POSIX systems.
-    8. Windows volumes are locked and dismounted before raw writes.
-    9. Source mutation during the write loop is detected.
-   10. Verified success requires post-flush readback.
-   11. Proven success requires manifest, source, and target agreement.
-   12. Partial-media failure is explicit.
-   13. There is no generic SUCCESS state.
+     1. A physical plan seal requires --allow-device and the live target token.
+     2. Target token v2 binds hardware descriptors and a serial hash when the
+        operating system and bridge expose them.
+     3. Identity strength is explicit; GEOMETRY_ONLY is never called strong.
+     4. A physical write requires the same device authorization and token.
+     5. Dangerous safety overrides are bound into the plan seal.
+     6. An attested write requires the exact current plan seal.
+     7. The target fingerprint is recomputed before the write handle is opened.
+     8. The running system disk is rejected by default.
+     9. Mounted targets are rejected on POSIX systems.
+    10. Windows volumes are locked and dismounted before raw writes.
+    11. Source mutation during the write loop is detected.
+    12. Verified success requires post-flush readback.
+    13. Proven success requires manifest, source, and target agreement.
+    14. Partial-media failure is explicit.
+    15. There is no generic SUCCESS state.
 
 RESULT STATES
 -------------
@@ -268,7 +292,7 @@ SOURCE TREE
     include/deadflash/   Public core interfaces
     src/common.c         Errors, timing, parsing, aligned allocation
     src/sha256.c         Dependency-free SHA-256
-    src/device.c         Device discovery, safety gates, raw OS I/O
+    src/device.c         Discovery, fingerprinting, safety, raw OS I/O
     src/pipeline.c       Hash, write, flush, and verification pipeline
     src/attest.c         Canonical operation-plan seals
     src/proof.c          Chunk manifest, Merkle root, mismatch location
@@ -276,9 +300,10 @@ SOURCE TREE
     src/report.c         JSON evidence writer
     src/main.c           Standard CLI and benchmark frontend
     src/proof_main.c     Attested-write and proof frontend
-    tests/               Hash, pipeline, identity, proof, and fault tests
-    scripts/             Core and proof benchmark collectors
+    tests/               Hash, pipeline, identity, fingerprint, proof, faults
+    scripts/             CI E2E, hardware qualification, benchmark collectors
     bench/results/       Raw validation and benchmark records
+    bench/hardware/      Physical-device evidence records
     docs/                Architecture, safety, proof, and benchmark contracts
 
 RELEASE GATE
@@ -286,12 +311,12 @@ RELEASE GATE
 
 The `v1.0.0` tag must not be created until all of these are true:
 
-    - GCC build and all tests pass.
-    - Clang build and all tests pass.
-    - MSVC build and all tests pass.
+    - GCC build and all seven tests pass.
+    - Clang build and all seven tests pass.
+    - MSVC build and all seven tests pass.
     - ASan and UBSan tests pass.
-    - Plan-seal mutation tests pass.
-    - Safety-override seal mutation tests pass.
+    - Hardware-fingerprint mutation tests pass.
+    - Plan-seal and safety-policy mutation tests pass.
     - Proof corruption and exact-offset tests pass.
     - File-backed evidence JSON parses successfully.
     - Sacrificial USB write, flush, readback, unplug, power-cycle, and
