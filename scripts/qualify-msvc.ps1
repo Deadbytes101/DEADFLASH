@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-    [string]$SourceDir = (Split-Path -Parent $PSScriptRoot),
+    [string]$SourceDir = "",
     [string]$BuildDir = "",
     [string]$EvidenceDir = "",
     [switch]$KeepBuild
@@ -23,11 +23,14 @@ function Import-VcVars64 {
         return [ordered]@{ source = 'existing-environment'; vcvars = $null }
     }
 
-    $vswhereCandidates = @(
-        (Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\vswhere.exe'),
-        (Join-Path $env:ProgramFiles 'Microsoft Visual Studio\Installer\vswhere.exe')
-    ) | Where-Object { $_ -and (Test-Path $_ -PathType Leaf) }
-    $vswhereCandidates = @($vswhereCandidates)
+    $vswhereCandidates = @()
+    foreach ($programFilesRoot in @(${env:ProgramFiles(x86)}, $env:ProgramFiles)) {
+        if ([string]::IsNullOrWhiteSpace($programFilesRoot)) { continue }
+        $candidate = Join-Path $programFilesRoot 'Microsoft Visual Studio\Installer\vswhere.exe'
+        if (Test-Path $candidate -PathType Leaf) {
+            $vswhereCandidates += $candidate
+        }
+    }
 
     if ($vswhereCandidates.Count -eq 0) {
         throw 'cl.exe is not in PATH and vswhere.exe was not found.'
@@ -112,6 +115,19 @@ function Invoke-Recorded {
     return $record
 }
 
+$scriptRoot = $PSScriptRoot
+if ([string]::IsNullOrWhiteSpace($scriptRoot)) {
+    $scriptPath = $MyInvocation.MyCommand.Path
+    if ([string]::IsNullOrWhiteSpace($scriptPath)) {
+        throw 'Could not determine the script directory. Pass -SourceDir explicitly.'
+    }
+    $scriptRoot = Split-Path -Parent $scriptPath
+}
+if ([string]::IsNullOrWhiteSpace($SourceDir)) {
+    $SourceDir = Split-Path -Parent $scriptRoot
+} else {
+    $SourceDir = Resolve-FullPath -Path $SourceDir -Base (Get-Location).Path
+}
 $SourceDir = [System.IO.Path]::GetFullPath($SourceDir)
 if (-not (Test-Path $SourceDir -PathType Container)) {
     throw "Source directory does not exist: $SourceDir"
