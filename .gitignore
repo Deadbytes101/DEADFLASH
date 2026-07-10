@@ -11,6 +11,8 @@
 *.bin
 *.json
 *.csv
+!bench/results/*.json
+!bench/results/*.csv
 .vs/
 .vscode/
 CMakeUserPresets.json
