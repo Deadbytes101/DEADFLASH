@@ -1,0 +1,69 @@
+name: CI
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-test:
+    name: ${{ matrix.os }} / ${{ matrix.compiler }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            compiler: gcc
+          - os: ubuntu-latest
+            compiler: clang
+          - os: windows-latest
+            compiler: msvc
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select GCC
+        if: matrix.compiler == 'gcc'
+        run: echo "CC=gcc" >> "$GITHUB_ENV"
+
+      - name: Select Clang
+        if: matrix.compiler == 'clang'
+        run: echo "CC=clang" >> "$GITHUB_ENV"
+
+      - name: Configure
+        run: cmake -S . -B build -DDEADFLASH_WARNINGS_AS_ERRORS=ON -DDEADFLASH_BUILD_TESTS=ON
+
+      - name: Build
+        run: cmake --build build --config Release --parallel
+
+      - name: Test
+        run: ctest --test-dir build -C Release --output-on-failure
+
+      - name: CLI smoke test
+        shell: bash
+        run: |
+          if [[ "${{ runner.os }}" == "Windows" ]]; then
+            ./build/Release/deadflash.exe version
+          else
+            ./build/deadflash version
+          fi
+
+  sanitizer:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure ASan and UBSan
+        env:
+          CC: clang
+          CFLAGS: -fsanitize=address,undefined -fno-omit-frame-pointer
+        run: cmake -S . -B build-san -DDEADFLASH_WARNINGS_AS_ERRORS=ON
+      - name: Build
+        run: cmake --build build-san --parallel
+      - name: Test
+        env:
+          ASAN_OPTIONS: detect_leaks=1:abort_on_error=1
+          UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
+        run: ctest --test-dir build-san --output-on-failure
