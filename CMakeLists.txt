@@ -11,7 +11,8 @@ option(DEADFLASH_BUILD_TESTS "Build DEADFLASH tests" ON)
 add_library(deadflash_core STATIC
     src/common.c
     src/sha256.c
-    src/io.c
+    src/device.c
+    src/pipeline.c
     src/fat32.c
     src/report.c
 )
