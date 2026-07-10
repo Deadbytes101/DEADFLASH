@@ -1,0 +1,19 @@
+DEADFLASH PROOF BENCHMARK RECORD
+===============================
+
+This file defines the minimum columns for published proof benchmarks.
+
+CSV HEADER
+----------
+
+    timestamp_utc,commit,os,cpu,ram_bytes,device,device_firmware,usb_controller,usb_port,image_name,image_size,image_sha256,tool,tool_version,class,buffer_bytes,proof_chunk_bytes,run_index,plan_seal_ms,source_hash_ms,write_ms,flush_ms,verify_ms,proof_create_ms,proof_verify_ms,mismatch_localization_ms,total_ms,bytes_written,bytes_verified,peak_working_set_bytes,cpu_user_ms,cpu_kernel_ms,injected_bad_offset,reported_bad_offset,result_state,notes
+
+RULES
+-----
+
+    - One row per run.
+    - Failed runs remain in the file.
+    - Unknown fields are empty, not zero.
+    - Device conditioning is recorded in notes or an adjacent metadata file.
+    - The raw CSV is committed before summary charts are produced.
+    - A Rufus row never invents unavailable proof or flush telemetry.
