@@ -13,21 +13,35 @@ SCOPE
     Compiler: Clang 17
     Language: strict C17
     Conditional target: _WIN32
-    Warning policy:
+
+DIAGNOSTIC MODES
+----------------
+
+    GNU DRIVER
+
         -Wall
         -Wextra
         -Wpedantic
         -Wconversion
         -Wshadow
         -Werror
+        -fsyntax-only
+
+    CL DRIVER
+
+        clang --driver-mode=cl
+        /std:c17
+        /W4
+        /WX
+        /Zs
 
 COMMAND
 -------
 
     CC=clang bash scripts/check-win32-surface.sh
 
-FILES CHECKED
--------------
+FILES CHECKED IN BOTH MODES
+---------------------------
 
     src/common.c
     src/sha256.c
@@ -43,7 +57,8 @@ FILES CHECKED
 RESULT
 ------
 
-    PASS
+    GNU DRIVER      PASS
+    CL DRIVER       PASS
 
 DEFECT FOUND AND FIXED
 ----------------------
@@ -71,9 +86,12 @@ BOUNDARY
 --------
 
 This is a compile-time API and conditional-source surface gate. The local stub
-headers model only the Win32 APIs used by DEADFLASH. It does not link Windows
-libraries, execute Windows code, validate ABI layout, replace the Windows SDK,
-or count as an MSVC pass.
+headers model only the Win32 APIs used by DEADFLASH. CL driver mode exercises
+MSVC-compatible command-line and warning behavior while still using the Linux
+host target for C runtime headers.
+
+It does not link Windows libraries, execute Windows code, validate Windows ABI
+layout, replace the Windows SDK, or count as an MSVC pass.
 
 Actual MSVC build/test and sacrificial Windows physical-device qualification
 remain mandatory release gates.
