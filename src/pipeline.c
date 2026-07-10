@@ -131,7 +131,6 @@ static df_status df_verify_sample_files(df_file *source, df_file *target,
         if (i == 0) offset = 0;
         else if (i == 1) offset = max_offset;
         else offset = max_offset == 0 ? 0 : df_prng_next(&seed) % (max_offset + 1u);
-        offset -= offset % 512u;
         status = df_read_at(source, left, block_size, offset, &got_left, error);
         if (status != DF_OK) goto fail;
         status = df_read_at(target, right, block_size, offset, &got_right, error);
@@ -224,6 +223,8 @@ df_status df_write_image(const char *source_path, const char *target_path,
     df_target_info planned;
     df_timer total_timer, phase_timer;
     df_status status;
+    df_sha256_ctx write_hash;
+    uint8_t written_source_hash[32];
     uint8_t *buffer = NULL;
     size_t buffer_size;
     size_t alignment;
@@ -297,6 +298,7 @@ df_status df_write_image(const char *source_path, const char *target_path,
         goto out;
     }
 
+    df_sha256_init(&write_hash);
     df_timer_start(&phase_timer);
     while (offset < source.size_bytes) {
         size_t wanted = (size_t)((source.size_bytes - offset) < buffer_size ?
@@ -311,6 +313,7 @@ df_status df_write_image(const char *source_path, const char *target_path,
             status = DF_ERR_IO;
             goto out;
         }
+        df_sha256_update(&write_hash, buffer, wanted);
         if (target.is_device && wanted % target.alignment != 0) {
             write_length = df_round_up_size(wanted, target.alignment);
             if (write_length == 0 || write_length > buffer_size) {
@@ -336,6 +339,13 @@ df_status df_write_image(const char *source_path, const char *target_path,
         result->bytes_written += wanted;
         offset += wanted;
         (void)snprintf(result->final_state, sizeof(result->final_state), "failed_partial_media");
+    }
+    df_sha256_final(&write_hash, written_source_hash);
+    if (!df_constant_time_equal(result->source_sha256, written_source_hash, 32)) {
+        df_error_set(error, DF_ERR_IDENTITY_CHANGED, 0,
+                     "source image changed between planning and the bytes written");
+        status = DF_ERR_IDENTITY_CHANGED;
+        goto out;
     }
     result->write_ms = df_timer_elapsed_ms(&phase_timer);
 
