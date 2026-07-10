@@ -17,13 +17,10 @@ function Resolve-FullPath {
     return [System.IO.Path]::GetFullPath((Join-Path $Base $Path))
 }
 
-function Import-VcVars64 {
-    $cl = Get-Command cl.exe -ErrorAction SilentlyContinue
-    if ($null -ne $cl) {
-        return [ordered]@{ source = 'existing-environment'; vcvars = $null }
-    }
-
+function Find-VisualStudio {
+    $clCommand = Get-Command cl.exe -ErrorAction SilentlyContinue
     $vswhereCandidates = @()
+
     foreach ($programFilesRoot in @(${env:ProgramFiles(x86)}, $env:ProgramFiles)) {
         if ([string]::IsNullOrWhiteSpace($programFilesRoot)) { continue }
         $candidate = Join-Path $programFilesRoot 'Microsoft Visual Studio\Installer\vswhere.exe'
@@ -33,39 +30,56 @@ function Import-VcVars64 {
     }
 
     if ($vswhereCandidates.Count -eq 0) {
-        throw 'cl.exe is not in PATH and vswhere.exe was not found.'
+        if ($null -ne $clCommand) {
+            return [ordered]@{
+                source = 'existing-environment'
+                installation_path = $null
+                vswhere = $null
+                cl = $clCommand.Source
+            }
+        }
+        throw 'Visual Studio discovery failed: neither vswhere.exe nor cl.exe was found.'
     }
 
     $vswhere = $vswhereCandidates[0]
+    Write-Host "[DISCOVER] $vswhere"
     $installationPathRaw = & $vswhere -latest -products * `
         -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 `
         -property installationPath | Select-Object -First 1
+    if ($LASTEXITCODE -ne 0) {
+        throw "vswhere.exe failed with exit code $LASTEXITCODE."
+    }
     if ([string]::IsNullOrWhiteSpace($installationPathRaw)) {
         throw 'No Visual Studio installation with the x64 C++ toolchain was found.'
     }
     $installationPath = $installationPathRaw.Trim()
 
-    $vcvars = Join-Path $installationPath 'VC\Auxiliary\Build\vcvars64.bat'
-    if (-not (Test-Path $vcvars -PathType Leaf)) {
-        throw "vcvars64.bat was not found at '$vcvars'."
+    $clPath = $null
+    $toolsRoot = Join-Path $installationPath 'VC\Tools\MSVC'
+    if (Test-Path $toolsRoot -PathType Container) {
+        $toolsets = @(Get-ChildItem -Path $toolsRoot -Directory |
+            Sort-Object -Property Name -Descending)
+        foreach ($toolset in $toolsets) {
+            $candidate = Join-Path $toolset.FullName 'bin\Hostx64\x64\cl.exe'
+            if (Test-Path $candidate -PathType Leaf) {
+                $clPath = $candidate
+                break
+            }
+        }
+    }
+    if ([string]::IsNullOrWhiteSpace($clPath) -and $null -ne $clCommand) {
+        $clPath = $clCommand.Source
+    }
+    if ([string]::IsNullOrWhiteSpace($clPath)) {
+        throw "Visual Studio was found at '$installationPath', but x64 cl.exe was not found."
     }
 
-    $lines = & $env:ComSpec /d /s /c "`"$vcvars`" >nul && set"
-    if ($LASTEXITCODE -ne 0) {
-        throw "vcvars64.bat failed with exit code $LASTEXITCODE."
+    return [ordered]@{
+        source = 'vswhere'
+        installation_path = $installationPath
+        vswhere = $vswhere
+        cl = $clPath
     }
-    foreach ($line in $lines) {
-        $separator = $line.IndexOf('=')
-        if ($separator -le 0) { continue }
-        $name = $line.Substring(0, $separator)
-        $value = $line.Substring($separator + 1)
-        [Environment]::SetEnvironmentVariable($name, $value, 'Process')
-    }
-
-    if ($null -eq (Get-Command cl.exe -ErrorAction SilentlyContinue)) {
-        throw 'vcvars64.bat completed but cl.exe is still unavailable.'
-    }
-    return [ordered]@{ source = 'vswhere-vcvars64'; vcvars = $vcvars }
 }
 
 function Invoke-Recorded {
@@ -74,7 +88,8 @@ function Invoke-Recorded {
         [Parameter(Mandatory)][string]$FilePath,
         [Parameter(Mandatory)][string[]]$Arguments,
         [Parameter(Mandatory)][string]$WorkingDirectory,
-        [int[]]$AcceptedExitCodes = @(0)
+        [int[]]$AcceptedExitCodes = @(0),
+        [int]$TimeoutSeconds = 900
     )
 
     $stdoutPath = Join-Path $script:TempLogDir ("{0}.stdout.txt" -f $Name)
@@ -88,30 +103,73 @@ function Invoke-Recorded {
             $argument
         }
     }
+
+    Write-Host ""
+    Write-Host ("[RUN] {0}" -f $Name)
+    Write-Host ("      {0} {1}" -f $FilePath, ($nativeArguments -join ' '))
+    Write-Host ("      stdout: {0}" -f $stdoutPath)
+    Write-Host ("      stderr: {0}" -f $stderrPath)
+
     $timer = [System.Diagnostics.Stopwatch]::StartNew()
     $process = Start-Process -FilePath $FilePath `
         -ArgumentList ($nativeArguments -join ' ') `
-        -WorkingDirectory $WorkingDirectory -NoNewWindow -Wait -PassThru `
+        -WorkingDirectory $WorkingDirectory -NoNewWindow -PassThru `
         -RedirectStandardOutput $stdoutPath -RedirectStandardError $stderrPath
+
+    $nextHeartbeat = 5
+    $timedOut = $false
+    while (-not $process.HasExited) {
+        Start-Sleep -Seconds 1
+        $process.Refresh()
+        if ($timer.Elapsed.TotalSeconds -ge $nextHeartbeat) {
+            Write-Host ("[RUNNING] {0} elapsed={1:N0}s" -f $Name, $timer.Elapsed.TotalSeconds)
+            $nextHeartbeat += 5
+        }
+        if ($timer.Elapsed.TotalSeconds -ge $TimeoutSeconds) {
+            $timedOut = $true
+            Write-Host ("[TIMEOUT] {0} exceeded {1}s; terminating process tree." -f $Name, $TimeoutSeconds)
+            & taskkill.exe /PID $process.Id /T /F 2>$null | Out-Null
+            break
+        }
+    }
+    if (-not $timedOut) {
+        $process.WaitForExit()
+    }
     $timer.Stop()
 
     $stdout = if (Test-Path $stdoutPath) { Get-Content $stdoutPath -Raw } else { '' }
     $stderr = if (Test-Path $stderrPath) { Get-Content $stderrPath -Raw } else { '' }
+    $exitCode = if ($timedOut) { -1 } else { $process.ExitCode }
     $record = [ordered]@{
         name = $Name
         executable = $FilePath
         arguments = $Arguments
         working_directory = $WorkingDirectory
-        exit_code = $process.ExitCode
+        exit_code = $exitCode
+        timed_out = $timedOut
+        timeout_seconds = $TimeoutSeconds
         elapsed_ms = [math]::Round($timer.Elapsed.TotalMilliseconds, 3)
         stdout = $stdout
         stderr = $stderr
     }
     $script:Record.commands += $record
 
-    if ($AcceptedExitCodes -notcontains $process.ExitCode) {
-        throw "Command '$Name' failed with exit code $($process.ExitCode)."
+    if ($timedOut) {
+        throw "Command '$Name' timed out after $TimeoutSeconds seconds."
     }
+    if ($AcceptedExitCodes -notcontains $exitCode) {
+        if (-not [string]::IsNullOrWhiteSpace($stdout)) {
+            Write-Host "--- $Name stdout ---"
+            Write-Host $stdout
+        }
+        if (-not [string]::IsNullOrWhiteSpace($stderr)) {
+            Write-Host "--- $Name stderr ---"
+            Write-Host $stderr
+        }
+        throw "Command '$Name' failed with exit code $exitCode."
+    }
+
+    Write-Host ("[PASS] {0} exit={1} elapsed={2:N1}s" -f $Name, $exitCode, $timer.Elapsed.TotalSeconds)
     return $record
 }
 
@@ -150,6 +208,13 @@ New-Item -ItemType Directory -Force -Path $script:TempLogDir | Out-Null
 $evidencePath = Join-Path $EvidenceDir ("msvc-qualification-$timestamp.json")
 $e2ePath = Join-Path $EvidenceDir ("msvc-e2e-$timestamp.json")
 
+Write-Host "DEADFLASH MSVC QUALIFICATION"
+Write-Host "============================"
+Write-Host ("SOURCE   : {0}" -f $SourceDir)
+Write-Host ("BUILD    : {0}" -f $BuildDir)
+Write-Host ("EVIDENCE : {0}" -f $evidencePath)
+Write-Host ("LOGS     : {0}" -f $script:TempLogDir)
+
 $script:Record = [ordered]@{
     schema = 'deadflash.msvc-qualification.v1'
     created_utc = [DateTimeOffset]::UtcNow.ToString('o')
@@ -157,6 +222,7 @@ $script:Record = [ordered]@{
     source_dir = $SourceDir
     build_dir = $BuildDir
     evidence_path = $evidencePath
+    log_directory = $script:TempLogDir
     cmake_generator = 'Visual Studio 17 2022'
     cmake_architecture = 'x64'
     expected_tests = 7
@@ -176,12 +242,20 @@ $script:Record = [ordered]@{
 }
 
 try {
-    $script:Record.visual_studio_environment = Import-VcVars64
+    Write-Host ""
+    Write-Host "[1/7] Discover Visual Studio and MSVC"
+    $script:Record.visual_studio_environment = Find-VisualStudio
+    Write-Host ("[FOUND] Visual Studio source: {0}" -f $script:Record.visual_studio_environment.source)
+    Write-Host ("[FOUND] cl.exe: {0}" -f $script:Record.visual_studio_environment.cl)
 
-    foreach ($required in @('cmake.exe', 'ctest.exe', 'cl.exe', 'python.exe')) {
-        if ($null -eq (Get-Command $required -ErrorAction SilentlyContinue)) {
+    Write-Host ""
+    Write-Host "[2/7] Validate required tools"
+    foreach ($required in @('cmake.exe', 'ctest.exe', 'python.exe')) {
+        $command = Get-Command $required -ErrorAction SilentlyContinue
+        if ($null -eq $command) {
             throw "Required executable is unavailable: $required"
         }
+        Write-Host ("[FOUND] {0}: {1}" -f $required, $command.Source)
     }
 
     $git = Get-Command git.exe -ErrorAction SilentlyContinue
@@ -189,32 +263,48 @@ try {
         $commit = (& $git.Source -C $SourceDir rev-parse HEAD 2>$null)
         if ($LASTEXITCODE -eq 0 -and $commit) {
             $script:Record.git_commit = $commit.Trim()
+            Write-Host ("[COMMIT] {0}" -f $script:Record.git_commit)
         }
     }
 
     if ((Test-Path $BuildDir) -and -not $KeepBuild) {
+        Write-Host ("[CLEAN] Removing {0}" -f $BuildDir)
         Remove-Item -Recurse -Force $BuildDir
     }
     New-Item -ItemType Directory -Force -Path $BuildDir | Out-Null
 
-    Invoke-Recorded -Name 'cl-version' -FilePath $env:ComSpec `
-        -Arguments @('/d', '/s', '/c', 'cl.exe /Bv 2>&1') `
-        -WorkingDirectory $SourceDir -AcceptedExitCodes @(0, 2) | Out-Null
+    Write-Host ""
+    Write-Host "[3/7] Record compiler version"
+    Invoke-Recorded -Name 'cl-version' `
+        -FilePath $script:Record.visual_studio_environment.cl `
+        -Arguments @('/Bv') `
+        -WorkingDirectory $SourceDir `
+        -AcceptedExitCodes @(0, 2) `
+        -TimeoutSeconds 60 | Out-Null
 
+    Write-Host ""
+    Write-Host "[4/7] Configure Visual Studio 2022 x64"
     Invoke-Recorded -Name 'cmake-configure' -FilePath 'cmake.exe' `
         -Arguments @('-S', $SourceDir, '-B', $BuildDir,
                      '-G', 'Visual Studio 17 2022', '-A', 'x64',
                      '-DDEADFLASH_WARNINGS_AS_ERRORS=ON',
                      '-DDEADFLASH_BUILD_TESTS=ON') `
-        -WorkingDirectory $SourceDir | Out-Null
+        -WorkingDirectory $SourceDir `
+        -TimeoutSeconds 300 | Out-Null
 
+    Write-Host ""
+    Write-Host "[5/7] Build Release"
     Invoke-Recorded -Name 'cmake-build' -FilePath 'cmake.exe' `
         -Arguments @('--build', $BuildDir, '--config', 'Release', '--parallel') `
-        -WorkingDirectory $SourceDir | Out-Null
+        -WorkingDirectory $SourceDir `
+        -TimeoutSeconds 1800 | Out-Null
 
+    Write-Host ""
+    Write-Host "[6/7] Run all seven tests"
     $ctest = Invoke-Recorded -Name 'ctest' -FilePath 'ctest.exe' `
         -Arguments @('--test-dir', $BuildDir, '-C', 'Release', '--output-on-failure') `
-        -WorkingDirectory $SourceDir
+        -WorkingDirectory $SourceDir `
+        -TimeoutSeconds 600
     $testsPassed = $ctest.stdout -match '100% tests passed' -and
                    $ctest.stdout -match '0 tests failed out of 7'
     $script:Record.tests = [ordered]@{
@@ -234,6 +324,8 @@ try {
         }
     }
 
+    Write-Host ""
+    Write-Host "[7/7] Run proof/corruption end-to-end qualification"
     $e2eWork = Join-Path $BuildDir 'e2e-msvc'
     Invoke-Recorded -Name 'e2e-proof' -FilePath 'python.exe' `
         -Arguments @((Join-Path $SourceDir 'scripts\e2e-proof.py'),
@@ -241,7 +333,8 @@ try {
                      '--proof', $proof,
                      '--work-dir', $e2eWork,
                      '--summary', $e2ePath) `
-        -WorkingDirectory $SourceDir | Out-Null
+        -WorkingDirectory $SourceDir `
+        -TimeoutSeconds 900 | Out-Null
     if (-not (Test-Path $e2ePath -PathType Leaf)) {
         throw "E2E evidence was not created: $e2ePath"
     }
@@ -254,6 +347,8 @@ try {
     }
 
     $script:Record.result = 'pass'
+    Write-Host ""
+    Write-Host "MSVC QUALIFICATION: PASS"
 }
 catch {
     $script:Record.result = 'fail'
@@ -262,11 +357,13 @@ catch {
         message = $_.Exception.Message
         stack = $_.ScriptStackTrace
     }
+    Write-Host ""
+    Write-Host ("MSVC QUALIFICATION: FAIL - {0}" -f $_.Exception.Message)
     throw
 }
 finally {
     $script:Record.completed_utc = [DateTimeOffset]::UtcNow.ToString('o')
     $script:Record | ConvertTo-Json -Depth 12 | Set-Content -Path $evidencePath -Encoding utf8
-    Remove-Item -Recurse -Force $script:TempLogDir -ErrorAction SilentlyContinue
-    Write-Host "MSVC EVIDENCE: $evidencePath"
+    Write-Host ("MSVC EVIDENCE: {0}" -f $evidencePath)
+    Write-Host ("MSVC LOGS: {0}" -f $script:TempLogDir)
 }
