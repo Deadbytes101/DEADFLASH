@@ -33,6 +33,26 @@ verified destructive-storage core. It does not yet perform Windows ISO file
 extraction, WIM splitting, persistence partitions, Windows To Go, or firmware
 boot emulation.
 
+No architecture or feature is described as superior to Rufus without a
+reproducible benchmark or a fault-injection result. The differentiators below
+are implementation facts about DEADFLASH, not claims about undocumented Rufus
+internals.
+
+DIFFERENTIATORS
+---------------
+
+    - The target identity is inspected, reduced to a confirmation token, and
+      inspected again immediately before the write handle is opened.
+    - Result states distinguish verified success, unverified success,
+      pre-write failure, partial-media failure, and verification failure.
+    - Full verification hashes the exact source-length region after the target
+      cache has been flushed and the write handle has been closed.
+    - Sample verification uses source-hash-seeded deterministic offsets so a
+      run can be reproduced instead of depending on process-global randomness.
+    - Every operation can emit a versioned JSON evidence record.
+    - The benchmark protocol separates write-only, flush-complete, sampled,
+      and full-verification classes instead of mixing correctness levels.
+
 BUILD
 -----
 
@@ -138,6 +158,9 @@ flowchart TD
     FULL --> REPORT
 ```
 
+The diagram describes the current code path. It is not a planned-feature or
+marketing diagram.
+
 SAFETY CONTRACT
 ---------------
 
@@ -167,7 +190,8 @@ SOURCE TREE
     include/deadflash/   Public core interfaces
     src/common.c         Errors, time, parsing, aligned allocation
     src/sha256.c         Dependency-free SHA-256 implementation
-    src/io.c             Device discovery, safety, raw I/O, verification
+    src/device.c         Device discovery, safety gates, raw OS I/O
+    src/pipeline.c       Hash, write, flush, and verification pipeline
     src/fat32.c          Native MBR/FAT32 creation and structural validation
     src/report.c         JSON evidence writer
     src/main.c           CLI and benchmark frontend
@@ -177,6 +201,6 @@ SOURCE TREE
 LICENSE
 -------
 
-GNU GPL version 2 (ONLY)
+GNU GPL version 2 only. The repository's LICENSE file is authoritative.
 
 NO MAGIC. NO GUESSING. WRITE THE BYTES AND READ THEM BACK.
