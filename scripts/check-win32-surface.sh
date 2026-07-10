@@ -13,6 +13,13 @@ common_sources=(
     src/proof.c
     src/main.c
     src/proof_main.c
+    tests/test_sha256.c
+    tests/test_pipeline.c
+    tests/test_fat32.c
+    tests/test_identity.c
+    tests/test_attest.c
+    tests/test_proof.c
+    tests/test_fingerprint.c
 )
 
 gnu_flags=(
