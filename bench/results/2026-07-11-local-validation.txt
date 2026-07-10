@@ -1,0 +1,121 @@
+DEADFLASH LOCAL VALIDATION RECORD
+=================================
+
+DATE
+----
+
+    2026-07-11
+
+SCOPE
+-----
+
+    Branch: agent/v1.0.0-core
+    Version: 1.0.0 candidate
+    Host: Linux x86_64 container
+    GCC: 14.2.0
+    Clang: 17.0.0 swiftlang build
+
+STRICT GCC BUILD
+----------------
+
+    cmake -S . -B build-integrated -G Ninja \
+        -DDEADFLASH_WARNINGS_AS_ERRORS=ON \
+        -DDEADFLASH_BUILD_TESTS=ON
+    cmake --build build-integrated --parallel
+    ctest --test-dir build-integrated --output-on-failure
+
+RESULT
+
+    6/6 PASS
+
+    sha256
+    pipeline
+    fat32
+    identity
+    attest
+    proof
+
+STRICT CLANG BUILD
+------------------
+
+    CC=clang cmake -S . -B build-clang -G Ninja \
+        -DDEADFLASH_WARNINGS_AS_ERRORS=ON \
+        -DDEADFLASH_BUILD_TESTS=ON
+    cmake --build build-clang --parallel
+    ctest --test-dir build-clang --output-on-failure
+
+RESULT
+
+    6/6 PASS
+
+GCC ASAN + UBSAN
+----------------
+
+    CC=gcc \
+    CFLAGS='-fsanitize=address,undefined -fno-omit-frame-pointer' \
+    LDFLAGS='-fsanitize=address,undefined' \
+    cmake -S . -B build-gcc-san -G Ninja \
+        -DDEADFLASH_WARNINGS_AS_ERRORS=ON \
+        -DDEADFLASH_BUILD_TESTS=ON
+
+    cmake --build build-gcc-san --parallel
+
+    ASAN_OPTIONS='detect_leaks=1:abort_on_error=1' \
+    UBSAN_OPTIONS='halt_on_error=1:print_stacktrace=1' \
+    ctest --test-dir build-gcc-san --output-on-failure
+
+RESULT
+
+    6/6 PASS
+
+END-TO-END PROOF FLOW
+---------------------
+
+IMAGE
+
+    source size: 6,291,579 bytes
+    source SHA-256:
+    bd57012cc331a7693999c6ad6b4938a1cefbfc122e599ca209931fa1ba27cedd
+
+FLOW
+
+    deadflash-proof seal
+    deadflash-proof write --verify full --proof --chunk 1MiB
+    deadflash-proof verify
+    inject one-byte corruption at absolute offset 3,146,505
+    deadflash-proof verify again
+
+RESULT
+
+    write state: success_verified
+    proof state before corruption: success_proven
+    state after corruption: target_mismatch
+    injected bad offset: 3,146,505
+    reported bad offset: 3,146,505
+    exact offset: PASS
+
+CLI SMOKE
+---------
+
+    deadflash version       PASS
+    deadflash-proof version PASS
+
+ENVIRONMENT EXCEPTION
+---------------------
+
+The installed Swift Clang 17 AddressSanitizer runtime crashed before main in a
+one-line independent puts("asan-ok") program at address 0xffffffffff700450.
+The same failure occurred before every DEADFLASH test body. This is recorded as
+a host runtime incompatibility, not counted as a DEADFLASH pass or failure.
+GCC ASan+UBSan on the same host completed all six tests successfully.
+
+NOT VALIDATED HERE
+------------------
+
+    MSVC build
+    Windows physical-drive backend
+    sacrificial USB unplug and power-cycle behavior
+    physical USB performance against Rufus
+    bootability of generated media
+
+No v1.0.0 production tag is justified by this local record alone.
