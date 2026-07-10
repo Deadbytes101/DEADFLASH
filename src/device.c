@@ -1,6 +1,7 @@
 #include "deadflash/io.h"
 #include "deadflash/sha256.h"
 
+#include <ctype.h>
 #include <errno.h>
 #include <inttypes.h>
 #include <stdlib.h>
@@ -27,21 +28,85 @@
 #define DF_DEFAULT_SAMPLE_COUNT 64u
 #define DF_DEFAULT_WRITE_RETRIES 4u
 
-static void df_make_token(df_target_info *info) {
-    char identity[DF_MAX_PATH_CHARS + 256];
+static void df_hash_text_field(df_sha256_ctx *hash, const char *text) {
+    const char separator = '\0';
+    const char *value = text != NULL ? text : "";
+    df_sha256_update(hash, value, strlen(value));
+    df_sha256_update(hash, &separator, 1u);
+}
+
+void df_compute_target_token(const df_target_info *info,
+                             char token[DF_TOKEN_HEX_CHARS + 1]) {
+    df_sha256_ctx hash;
     uint8_t digest[32];
-    char hex[65];
-    int written;
-    written = snprintf(identity, sizeof(identity), "%s|%u|%" PRIu64 "|%u|%u|%u|%u",
-                       info->path, (unsigned)info->kind, info->size_bytes,
-                       info->logical_sector_size, info->physical_sector_size,
-                       info->read_only ? 1u : 0u, info->system_disk ? 1u : 0u);
-    if (written < 0) identity[0] = '\0';
-    identity[sizeof(identity) - 1] = '\0';
-    df_sha256_buffer(identity, strlen(identity), digest);
+    char number[64];
+    char hex[DF_SHA256_HEX_CHARS + 1];
+    if (token == NULL) return;
+    token[0] = '\0';
+    if (info == NULL) return;
+
+    df_sha256_init(&hash);
+    df_hash_text_field(&hash, "deadflash.target.v2");
+    df_hash_text_field(&hash, info->path);
+    (void)snprintf(number, sizeof(number), "%u", (unsigned)info->kind);
+    df_hash_text_field(&hash, number);
+    (void)snprintf(number, sizeof(number), "%llu",
+                   (unsigned long long)info->size_bytes);
+    df_hash_text_field(&hash, number);
+    (void)snprintf(number, sizeof(number), "%u", info->logical_sector_size);
+    df_hash_text_field(&hash, number);
+    (void)snprintf(number, sizeof(number), "%u", info->physical_sector_size);
+    df_hash_text_field(&hash, number);
+    (void)snprintf(number, sizeof(number), "%u", info->read_only ? 1u : 0u);
+    df_hash_text_field(&hash, number);
+    (void)snprintf(number, sizeof(number), "%u", info->system_disk ? 1u : 0u);
+    df_hash_text_field(&hash, number);
+    (void)snprintf(number, sizeof(number), "%u", info->descriptor_present ? 1u : 0u);
+    df_hash_text_field(&hash, number);
+    (void)snprintf(number, sizeof(number), "%u", info->serial_bound ? 1u : 0u);
+    df_hash_text_field(&hash, number);
+    df_hash_text_field(&hash, info->bus_type);
+    df_hash_text_field(&hash, info->vendor);
+    df_hash_text_field(&hash, info->product);
+    df_hash_text_field(&hash, info->revision);
+    df_hash_text_field(&hash, info->serial_sha256);
+
+    df_sha256_final(&hash, digest);
     df_hex_encode(digest, sizeof(digest), hex);
-    memcpy(info->token, hex, DF_TOKEN_HEX_CHARS);
-    info->token[DF_TOKEN_HEX_CHARS] = '\0';
+    memcpy(token, hex, DF_TOKEN_HEX_CHARS);
+    token[DF_TOKEN_HEX_CHARS] = '\0';
+}
+
+static void df_make_token(df_target_info *info) {
+    if (info != NULL) df_compute_target_token(info, info->token);
+}
+
+static void df_copy_trimmed(char *output, size_t output_size,
+                            const char *input, size_t input_limit) {
+    size_t begin = 0;
+    size_t end;
+    size_t count;
+    if (output == NULL || output_size == 0u) return;
+    output[0] = '\0';
+    if (input == NULL) return;
+    end = 0;
+    while (end < input_limit && input[end] != '\0') ++end;
+    while (begin < end && isspace((unsigned char)input[begin])) ++begin;
+    while (end > begin && isspace((unsigned char)input[end - 1u])) --end;
+    count = end - begin;
+    if (count >= output_size) count = output_size - 1u;
+    if (count > 0u) memcpy(output, input + begin, count);
+    output[count] = '\0';
+}
+
+static void df_hash_serial(char output[DF_SHA256_HEX_CHARS + 1],
+                           const char *serial) {
+    uint8_t digest[32];
+    if (output == NULL) return;
+    output[0] = '\0';
+    if (serial == NULL || serial[0] == '\0') return;
+    df_sha256_buffer(serial, strlen(serial), digest);
+    df_hex_encode(digest, sizeof(digest), output);
 }
 
 #if defined(_WIN32)
@@ -66,6 +131,71 @@ static wchar_t *df_utf8_to_wide(const char *text, df_error *error) {
         return NULL;
     }
     return wide;
+}
+
+static void df_windows_descriptor_text(const BYTE *buffer, DWORD returned,
+                                       DWORD offset, char *output,
+                                       size_t output_size) {
+    if (buffer == NULL || output == NULL || output_size == 0u ||
+        offset == 0u || offset >= returned) {
+        if (output != NULL && output_size > 0u) output[0] = '\0';
+        return;
+    }
+    df_copy_trimmed(output, output_size, (const char *)(buffer + offset),
+                    (size_t)(returned - offset));
+}
+
+static void df_windows_read_identity(HANDLE handle, df_target_info *info) {
+    STORAGE_PROPERTY_QUERY query;
+    BYTE buffer[4096];
+    DWORD returned = 0;
+    char serial[256];
+    if (handle == INVALID_HANDLE_VALUE || info == NULL) return;
+
+    memset(&query, 0, sizeof(query));
+    memset(buffer, 0, sizeof(buffer));
+    query.PropertyId = StorageDeviceProperty;
+    query.QueryType = PropertyStandardQuery;
+    if (DeviceIoControl(handle, IOCTL_STORAGE_QUERY_PROPERTY,
+                        &query, (DWORD)sizeof(query), buffer,
+                        (DWORD)sizeof(buffer), &returned, NULL) &&
+        returned >= (DWORD)offsetof(STORAGE_DEVICE_DESCRIPTOR, RawDeviceProperties)) {
+        const STORAGE_DEVICE_DESCRIPTOR *descriptor =
+            (const STORAGE_DEVICE_DESCRIPTOR *)buffer;
+        info->descriptor_present = true;
+        (void)snprintf(info->bus_type, sizeof(info->bus_type), "windows:%u",
+                       (unsigned)descriptor->BusType);
+        df_windows_descriptor_text(buffer, returned, descriptor->VendorIdOffset,
+                                   info->vendor, sizeof(info->vendor));
+        df_windows_descriptor_text(buffer, returned, descriptor->ProductIdOffset,
+                                   info->product, sizeof(info->product));
+        df_windows_descriptor_text(buffer, returned,
+                                   descriptor->ProductRevisionOffset,
+                                   info->revision, sizeof(info->revision));
+        df_windows_descriptor_text(buffer, returned, descriptor->SerialNumberOffset,
+                                   serial, sizeof(serial));
+        if (serial[0] != '\0') {
+            df_hash_serial(info->serial_sha256, serial);
+            info->serial_bound = info->serial_sha256[0] != '\0';
+        }
+    }
+
+    memset(&query, 0, sizeof(query));
+    memset(buffer, 0, sizeof(buffer));
+    returned = 0;
+    query.PropertyId = StorageAccessAlignmentProperty;
+    query.QueryType = PropertyStandardQuery;
+    if (DeviceIoControl(handle, IOCTL_STORAGE_QUERY_PROPERTY,
+                        &query, (DWORD)sizeof(query), buffer,
+                        (DWORD)sizeof(buffer), &returned, NULL) &&
+        returned >= (DWORD)sizeof(STORAGE_ACCESS_ALIGNMENT_DESCRIPTOR)) {
+        const STORAGE_ACCESS_ALIGNMENT_DESCRIPTOR *alignment =
+            (const STORAGE_ACCESS_ALIGNMENT_DESCRIPTOR *)buffer;
+        if (alignment->BytesPerLogicalSector != 0u)
+            info->logical_sector_size = alignment->BytesPerLogicalSector;
+        if (alignment->BytesPerPhysicalSector != 0u)
+            info->physical_sector_size = alignment->BytesPerPhysicalSector;
+    }
 }
 
 static bool df_is_physical_drive_path(const char *path, unsigned *number) {
@@ -198,6 +328,60 @@ static df_status df_win_error(df_error *error, df_status status, const char *ope
 
 #else
 
+static bool df_read_trimmed_file(const char *path, char *output,
+                                 size_t output_size) {
+    FILE *file;
+    char buffer[512];
+    if (path == NULL || output == NULL || output_size == 0u) return false;
+    output[0] = '\0';
+    file = fopen(path, "r");
+    if (file == NULL) return false;
+    if (fgets(buffer, sizeof(buffer), file) == NULL) {
+        fclose(file);
+        return false;
+    }
+    fclose(file);
+    df_copy_trimmed(output, output_size, buffer, strlen(buffer));
+    return output[0] != '\0';
+}
+
+#if defined(__linux__)
+static void df_linux_read_identity(const char *disk, df_target_info *info) {
+    char path[PATH_MAX];
+    char serial[256];
+    char link_target[PATH_MAX];
+    ssize_t link_length;
+    const char *base;
+    if (disk == NULL || info == NULL || disk[0] == '\0') return;
+
+    (void)snprintf(path, sizeof(path), "/sys/class/block/%s/device/vendor", disk);
+    (void)df_read_trimmed_file(path, info->vendor, sizeof(info->vendor));
+    (void)snprintf(path, sizeof(path), "/sys/class/block/%s/device/model", disk);
+    (void)df_read_trimmed_file(path, info->product, sizeof(info->product));
+    (void)snprintf(path, sizeof(path), "/sys/class/block/%s/device/rev", disk);
+    (void)df_read_trimmed_file(path, info->revision, sizeof(info->revision));
+    (void)snprintf(path, sizeof(path), "/sys/class/block/%s/device/serial", disk);
+    if (df_read_trimmed_file(path, serial, sizeof(serial))) {
+        df_hash_serial(info->serial_sha256, serial);
+        info->serial_bound = info->serial_sha256[0] != '\0';
+    }
+
+    (void)snprintf(path, sizeof(path), "/sys/class/block/%s/device/subsystem", disk);
+    link_length = readlink(path, link_target, sizeof(link_target) - 1u);
+    if (link_length > 0) {
+        link_target[(size_t)link_length] = '\0';
+        base = strrchr(link_target, '/');
+        base = base != NULL ? base + 1 : link_target;
+        df_copy_trimmed(info->bus_type, sizeof(info->bus_type), base, strlen(base));
+    }
+    info->descriptor_present = info->bus_type[0] != '\0' ||
+                               info->vendor[0] != '\0' ||
+                               info->product[0] != '\0' ||
+                               info->revision[0] != '\0' ||
+                               info->serial_bound;
+}
+#endif
+
 static df_status df_errno_error(df_error *error, df_status status, const char *operation, const char *path) {
     int code = errno;
     df_error_set(error, status, code, "%s '%s': %s", operation,
@@ -317,6 +501,7 @@ df_status df_inspect_target(const char *path, df_target_info *info, df_error *er
                                 &hotplug, (DWORD)sizeof(hotplug), &returned, NULL)) {
                 info->removable = hotplug.MediaRemovable || hotplug.DeviceHotplug;
             }
+            df_windows_read_identity(handle, info);
             info->read_only = !DeviceIoControl(handle, IOCTL_DISK_IS_WRITABLE, NULL, 0,
                                                 NULL, 0, &writable_returned, NULL);
             df_windows_mount_state((DWORD)disk_number, &info->mounted, &info->system_disk);
@@ -400,6 +585,13 @@ df_status df_inspect_target(const char *path, df_target_info *info, df_error *er
                             if (fscanf(removable_file, "%d", &removable_value) == 1) info->removable = removable_value != 0;
                             fclose(removable_file);
                         }
+                    }
+                }
+                {
+                    char identity_disk[256];
+                    if (df_sysfs_whole_disk_name(major(st.st_rdev), minor(st.st_rdev),
+                                                 identity_disk, sizeof(identity_disk))) {
+                        df_linux_read_identity(identity_disk, info);
                     }
                 }
             }
@@ -488,13 +680,11 @@ df_status df_open_source(const char *path, df_file *file, df_error *error) {
     {
         wchar_t *wide = df_utf8_to_wide(path, error);
         LARGE_INTEGER size;
-        unsigned disk_number = 0;
-        bool physical_drive;
-        DWORD flags;
         if (wide == NULL) return error != NULL ? error->code : DF_ERR_INVALID_ARGUMENT;
-        physical_drive = df_is_physical_drive_path(path, &disk_number);
-        flags = physical_drive ? FILE_ATTRIBUTE_NORMAL :
-                (FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN);
+        unsigned disk_number = 0;
+        bool physical_drive = df_is_physical_drive_path(path, &disk_number);
+        DWORD flags = physical_drive ? FILE_ATTRIBUTE_NORMAL :
+                      (FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN);
         file->handle = CreateFileW(wide, GENERIC_READ,
                                    FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
                                    NULL, OPEN_EXISTING, flags, NULL);

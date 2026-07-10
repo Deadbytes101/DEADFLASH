@@ -84,6 +84,11 @@ if(DEADFLASH_BUILD_TESTS)
     target_link_libraries(test_proof PRIVATE deadflash_core)
     deadflash_enable_warnings(test_proof)
     add_test(NAME proof COMMAND test_proof)
+
+    add_executable(test_fingerprint tests/test_fingerprint.c)
+    target_link_libraries(test_fingerprint PRIVATE deadflash_core)
+    deadflash_enable_warnings(test_fingerprint)
+    add_test(NAME fingerprint COMMAND test_fingerprint)
 endif()
 
 install(TARGETS deadflash deadflash-proof RUNTIME DESTINATION bin)

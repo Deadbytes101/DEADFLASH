@@ -76,6 +76,14 @@ static void print_target(const df_target_info *info) {
     printf("READ_ONLY          : %s\n", info->read_only ? "YES" : "NO");
     printf("MOUNTED            : %s\n", info->mounted ? "YES" : "NO");
     printf("SYSTEM_DISK        : %s\n", info->system_disk ? "YES" : "NO");
+    printf("IDENTITY_STRENGTH  : %s\n",
+           info->serial_bound ? "SERIAL_BOUND" :
+           (info->descriptor_present ? "DESCRIPTOR_BOUND" : "GEOMETRY_ONLY"));
+    printf("BUS_TYPE           : %s\n", info->bus_type[0] ? info->bus_type : "-");
+    printf("VENDOR             : %s\n", info->vendor[0] ? info->vendor : "-");
+    printf("PRODUCT            : %s\n", info->product[0] ? info->product : "-");
+    printf("REVISION           : %s\n", info->revision[0] ? info->revision : "-");
+    printf("SERIAL_SHA256      : %s\n", info->serial_sha256[0] ? info->serial_sha256 : "-");
     printf("CONFIRMATION_TOKEN : %s\n", info->token);
 }
 
@@ -86,6 +94,7 @@ static int command_inspect(const char *path) {
     print_target(&info);
     return 0;
 }
+
 
 static int command_plan(int argc, char **argv) {
     df_file source;

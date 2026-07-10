@@ -69,6 +69,17 @@ df_status df_write_json_report(const char *path, const df_report_context *contex
         fprintf(file, "    \"removable\": %s,\n", context->target->removable ? "true" : "false");
         fprintf(file, "    \"mounted\": %s,\n", context->target->mounted ? "true" : "false");
         fprintf(file, "    \"system_disk\": %s,\n", context->target->system_disk ? "true" : "false");
+        fprintf(file, "    \"descriptor_present\": %s,\n", context->target->descriptor_present ? "true" : "false");
+        fprintf(file, "    \"serial_bound\": %s,\n", context->target->serial_bound ? "true" : "false");
+        fputs("    \"identity_strength\": ", file);
+        json_string(file, context->target->serial_bound ? "serial_bound" :
+                          (context->target->descriptor_present ? "descriptor_bound" : "geometry_only"));
+        fputs(",\n", file);
+        fputs("    \"bus_type\": ", file); json_string(file, context->target->bus_type); fputs(",\n", file);
+        fputs("    \"vendor\": ", file); json_string(file, context->target->vendor); fputs(",\n", file);
+        fputs("    \"product\": ", file); json_string(file, context->target->product); fputs(",\n", file);
+        fputs("    \"revision\": ", file); json_string(file, context->target->revision); fputs(",\n", file);
+        fputs("    \"serial_sha256\": ", file); json_string(file, context->target->serial_sha256); fputs(",\n", file);
         fputs("    \"token\": ", file); json_string(file, context->target->token); fputs("\n  },\n", file);
     } else {
         fputs("  \"target\": null,\n", file);

@@ -12,6 +12,11 @@ typedef int df_native_handle;
 #define DF_INVALID_HANDLE (-1)
 #endif
 
+#define DF_DEVICE_BUS_CHARS 32u
+#define DF_DEVICE_VENDOR_CHARS 64u
+#define DF_DEVICE_PRODUCT_CHARS 128u
+#define DF_DEVICE_REVISION_CHARS 32u
+
 typedef enum df_target_kind {
     DF_TARGET_REGULAR_FILE = 0,
     DF_TARGET_BLOCK_DEVICE,
@@ -30,6 +35,13 @@ typedef struct df_target_info {
     bool read_only;
     bool mounted;
     bool system_disk;
+    bool descriptor_present;
+    bool serial_bound;
+    char bus_type[DF_DEVICE_BUS_CHARS];
+    char vendor[DF_DEVICE_VENDOR_CHARS];
+    char product[DF_DEVICE_PRODUCT_CHARS];
+    char revision[DF_DEVICE_REVISION_CHARS];
+    char serial_sha256[DF_SHA256_HEX_CHARS + 1];
     char token[DF_TOKEN_HEX_CHARS + 1];
 } df_target_info;
 
@@ -76,6 +88,7 @@ typedef struct df_write_result {
     char final_state[48];
 } df_write_result;
 
+void df_compute_target_token(const df_target_info *info, char token[DF_TOKEN_HEX_CHARS + 1]);
 df_status df_inspect_target(const char *path, df_target_info *info, df_error *error);
 df_status df_list_targets(FILE *output, df_error *error);
 df_status df_open_source(const char *path, df_file *file, df_error *error);
