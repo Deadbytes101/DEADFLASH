@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -29,14 +30,27 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
       - name: Configure
         run: cmake -S . -B build -DDEADFLASH_WARNINGS_AS_ERRORS=ON -DDEADFLASH_BUILD_TESTS=ON
 
       - name: Build
         run: cmake --build build --config Release --parallel
 
-      - name: Test
+      - name: Unit and integration tests
         run: ctest --test-dir build -C Release --output-on-failure
+
+      - name: Release end-to-end proof qualification
+        shell: bash
+        run: |
+          python scripts/e2e-proof.py \
+            --deadflash '${{ matrix.standard_binary }}' \
+            --proof '${{ matrix.proof_binary }}' \
+            --work-dir release-e2e \
+            --summary release-e2e-summary.json
 
       - name: Stage artifacts
         shell: bash
@@ -46,6 +60,8 @@ jobs:
           cp '${{ matrix.proof_binary }}' 'dist/deadflash-proof${{ matrix.extension }}'
           cp README.md CHANGELOG.md LICENSE dist/
           cp docs/COMMANDS.txt docs/NO_MAGIC.md docs/PROOF_FORMAT.md dist/
+          cp docs/USB_QUALIFICATION.md dist/
+          cp release-e2e-summary.json dist/
 
       - name: Archive Linux
         if: runner.os == 'Linux'
