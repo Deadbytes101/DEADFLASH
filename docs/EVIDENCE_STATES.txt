@@ -1,0 +1,31 @@
+DEADFLASH EVIDENCE STATES
+=========================
+
+success_unverified
+    Write and flush completed. No readback proof was requested.
+
+success_verified
+    Requested sample or full post-flush readback completed successfully.
+
+success_proven
+    Manifest structure, Merkle root, original source, and target all agree.
+
+failed_before_write
+    Failure occurred before any target write was accepted.
+
+failed_partial_media
+    One or more target bytes may have been written before failure.
+
+plan_breach_partial_media
+    The final write-stream source hash did not match the authorized plan seal.
+    Media may contain partial or unauthorized bytes.
+
+verification_failed
+    Write completed but requested readback did not establish equality.
+
+source_changed
+    Source identity differs from the proof manifest or authorized plan.
+
+target_mismatch
+    Source identity is valid but target bytes differ; proof output includes the
+    first exact mismatching byte offset when available.
