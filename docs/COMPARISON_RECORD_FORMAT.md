@@ -96,6 +96,31 @@ They count toward failure rate and appear in the summary. Timing statistics use
 successful runs only, while the minimum-success gate prevents a tool with too
 few valid runs from receiving a comparison result.
 
+ATOMIC RUN RECORDER
+-------------------
+
+Use the recorder instead of editing JSONL by hand. It hashes the image, assigns
+the next order index, checks the evidence file, rejects duplicate IDs, rejects a
+changed comparison context, writes a temporary file, fsyncs it, and atomically
+replaces the dataset.
+
+    python scripts/add-comparison-run.py bench/hardware/DEVICE-A/runs.jsonl \
+        --tool DEADFLASH \
+        --tool-version 1.0.0-candidate+COMMIT \
+        --image qualification.img \
+        --device-id DEVICE-A-TOKEN-V2 \
+        --port-id rear-xhci-port-03 \
+        --controller PCI-VEN_XXXX-DEV_YYYY \
+        --os-build "Windows 11 BUILD" \
+        --correctness-class D_FULL_VERIFY \
+        --conditioning full-overwrite-idle-10m \
+        --total-ms 123456.789 \
+        --evidence-path bench/hardware/DEVICE-A/deadflash/run-01.json \
+        --success
+
+For a failed run use `--failed`; keep its evidence and measured elapsed time.
+Do not use `--allow-missing-evidence` for release records.
+
 COMPARATOR
 ----------
 
