@@ -1,0 +1,36 @@
+DEADFLASH TEST MATRIX
+=====================
+
+UNIT / FILE-BACKED
+------------------
+
+    sha256_known_vectors
+    raw_write_full_verify
+    raw_write_sample_verify
+    target_corruption_detection
+    fat32_layout_and_structure
+    target_identity_change
+    plan_seal_deterministic
+    plan_seal_policy_change
+    plan_seal_wrong_value_rejected
+    proof_manifest_round_trip
+    proof_target_corruption
+    proof_exact_bad_offset
+    proof_source_identity_change
+
+PHYSICAL / MANUAL RELEASE QUALIFICATION
+---------------------------------------
+
+    wrong_device_token
+    mounted_target
+    system_disk
+    write_protected_target
+    unplug_during_write
+    unplug_during_flush
+    unplug_during_verify
+    power_cycle_then_proof
+    bridge_identity_change
+    fake_capacity_target
+
+Only the unit/file-backed matrix is suitable for ordinary hosted CI. Physical
+qualification records belong in bench/results and the release evidence issue.
