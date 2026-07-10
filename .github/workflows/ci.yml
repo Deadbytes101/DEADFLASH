@@ -54,14 +54,16 @@ jobs:
           fi
 
   sanitizer:
+    name: ubuntu-latest / gcc-asan-ubsan
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - name: Configure ASan and UBSan
         env:
-          CC: clang
+          CC: gcc
           CFLAGS: -fsanitize=address,undefined -fno-omit-frame-pointer
-        run: cmake -S . -B build-san -DDEADFLASH_WARNINGS_AS_ERRORS=ON
+          LDFLAGS: -fsanitize=address,undefined
+        run: cmake -S . -B build-san -DDEADFLASH_WARNINGS_AS_ERRORS=ON -DDEADFLASH_BUILD_TESTS=ON
       - name: Build
         run: cmake --build build-san --parallel
       - name: Test
