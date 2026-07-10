@@ -52,6 +52,12 @@ jobs:
             --work-dir release-e2e \
             --summary release-e2e-summary.json
 
+      - name: Qualification image reproducibility contract
+        run: python scripts/test-qualification-image.py
+
+      - name: Benchmark comparison contract
+        run: python scripts/test-benchmark-comparator.py
+
       - name: Stage artifacts
         shell: bash
         run: |
@@ -62,7 +68,9 @@ jobs:
           cp docs/COMMANDS.txt docs/NO_MAGIC.md docs/PROOF_FORMAT.md dist/
           cp docs/USB_QUALIFICATION.md docs/WINDOWS_MSVC_QUALIFICATION.md dist/
           cp docs/COMPARISON_RECORD_FORMAT.md docs/BENCHMARK_PROTOCOL.md dist/
+          cp docs/QUALIFICATION_IMAGE.md dist/
           cp scripts/e2e-proof.py scripts/qualify-usb.py scripts/qualify-msvc.ps1 dist/scripts/
+          cp scripts/make-qualification-image.py dist/scripts/
           cp scripts/add-comparison-run.py scripts/compare-benchmarks.py dist/scripts/
           cp release-e2e-summary.json dist/
 
