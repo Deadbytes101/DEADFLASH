@@ -40,8 +40,8 @@ COMMAND
 
     CC=clang bash scripts/check-win32-surface.sh
 
-FILES CHECKED IN BOTH MODES
----------------------------
+PRODUCTION FILES CHECKED IN BOTH MODES
+-------------------------------------
 
     src/common.c
     src/sha256.c
@@ -54,14 +54,25 @@ FILES CHECKED IN BOTH MODES
     src/main.c
     src/proof_main.c
 
+TEST FILES CHECKED IN BOTH MODES
+-------------------------------
+
+    tests/test_sha256.c
+    tests/test_pipeline.c
+    tests/test_fat32.c
+    tests/test_identity.c
+    tests/test_attest.c
+    tests/test_proof.c
+    tests/test_fingerprint.c
+
 RESULT
 ------
 
     GNU DRIVER      PASS
     CL DRIVER       PASS
 
-DEFECT FOUND AND FIXED
-----------------------
+DEFECTS FOUND AND FIXED
+-----------------------
 
 The first surface run rejected the Windows monotonic timer because signed
 `LONGLONG` counter arithmetic was multiplied by an unsigned constant before the
@@ -72,6 +83,10 @@ explicit conversion. The implementation now:
     - checks QueryPerformanceCounter success
     - rejects a negative counter
     - converts the counter before unsigned nanosecond arithmetic
+
+The MSVC C configuration also removed `/permissive-`. DEADFLASH is a C-only
+project; using a C++ conformance switch could produce an ignored-option warning
+that becomes a hard failure under `/WX`.
 
 POST-FIX REGRESSION
 -------------------
