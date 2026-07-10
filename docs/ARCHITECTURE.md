@@ -26,10 +26,12 @@ IMPLEMENTED CONTROL FLOW
 flowchart TD
     A[Source Image] --> B[Full Source SHA-256]
     C[Target Path] --> D[Target Geometry + Safety Classification]
-    E[Write Policy] --> F[Verify Mode + Buffer + Retry + Direct I/O]
+    E[Write Policy] --> F[Verify + Buffer + Retry + Direct I/O]
+    SA[Safety Authorization] --> SF[Allow Device + Mounted/System Overrides]
     B --> G[Canonical Operation Record]
     D --> G
     F --> G
+    SF --> G
     G --> H[SHA-256 Plan Seal]
     H --> I{Recomputed Seal Equal?}
     I -->|No| X[failed_before_write]
@@ -58,8 +60,8 @@ OPERATION PLAN ATTESTATION
 --------------------------
 
 `df_attest_plan` creates a canonical text record and hashes it with SHA-256.
-The record binds all fields that can change the meaning or correctness of the
-write:
+The record binds all fields that can change the meaning, safety authorization,
+or correctness of the write:
 
     - Source byte length
     - Full source SHA-256
@@ -72,9 +74,14 @@ write:
     - Write retry count
     - Direct-I/O policy
     - Regular-file truncation policy
+    - Physical-device authorization
+    - Mounted-target override
+    - System-disk override
 
-`deadflash-proof write --seal HEX` recomputes the plan from live state. A stale
-seal fails before the destructive core is called.
+A physical plan cannot be sealed unless `--allow-device` and the current target
+token are supplied. `deadflash-proof write --seal HEX` recomputes the same
+record from live state. Adding or removing a dangerous override changes the
+seal and rejects the old authorization before the destructive core is called.
 
 The raw writer also returns the SHA-256 of the exact unpadded source bytes that
 flowed through its write loop. The attested wrapper compares that hash with the
@@ -82,9 +89,13 @@ hash authorized by the plan. A disagreement can never be reported as success;
 it becomes `plan_breach_partial_media` because media may already contain a
 partial or unauthorized stream.
 
+Pre-write rejection initializes the result record to `failed_before_write`.
+No CLI path prints uninitialized state or byte counters after a bad seal.
+
 The plan seal is not a digital signature. Anyone who can replace the program
-or trusted seal can generate another seal. Its purpose is exact stale-plan and
-policy-change detection, not identity authentication.
+or trusted seal can generate another seal. Its purpose is exact stale-plan,
+safety-policy-change, and I/O-policy-change detection, not identity
+authentication.
 
 PROOF MANIFEST
 --------------
@@ -160,8 +171,10 @@ PIPELINE
 
 ATTEST
 
-    Canonical plan creation, SHA-256 plan seal, live-state recomputation, seal
-    enforcement, and post-write comparison against the authorized source hash.
+    Canonical plan creation, physical-device authorization, safety-override
+    binding, SHA-256 plan seal, live-state recomputation, seal enforcement,
+    deterministic pre-write failure records, and post-write comparison against
+    the authorized source hash.
 
 PROOF
 
@@ -182,9 +195,11 @@ EVIDENCE
 HARD INVARIANTS
 ---------------
 
-    - Physical writes require explicit device permission.
-    - Physical writes require the live target token.
-    - Attested writes require a seal over the live source, target, and policy.
+    - A physical plan requires explicit device permission and the live token.
+    - A physical write requires the same permission and token.
+    - Mounted-target and system-disk overrides are part of the plan seal.
+    - Attested writes require a seal over live source, target, safety, and I/O
+      policy.
     - Source and target I/O use explicit offsets.
     - Short reads and short writes are failures.
     - Target changes abort before the write handle is opened.
@@ -218,8 +233,12 @@ Required proof-oriented metrics:
     cpu_kernel_ms
 
 A run is disqualified if either tool writes a different image, skips the flush
-boundary, uses weaker verification, or reports success after injected
-corruption.
+boundary, uses weaker verification, changes safety policy after authorization,
+or reports success after injected corruption.
+
+The repository includes a file-backed proof collector and raw sample records.
+Those records validate the harness and exact-offset detector. They are not a
+physical USB benchmark and not evidence of broad superiority over Rufus.
 
 KNOWN BOUNDARIES
 ----------------
