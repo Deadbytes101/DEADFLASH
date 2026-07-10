@@ -1,0 +1,45 @@
+{
+  "schema": "deadflash.proof-benchmark.summary.v1",
+  "created_utc": "2026-07-10T22:20:34.762460+00:00",
+  "proof_executable": "build-integrated/deadflash-proof",
+  "image": "e2e-proof/source.img",
+  "image_size": 6291579,
+  "image_sha256": "bd57012cc331a7693999c6ad6b4938a1cefbfc122e599ca209931fa1ba27cedd",
+  "target": "e2e-proof/target-clean.img",
+  "runs": 5,
+  "chunk_bytes": 1048576,
+  "buffer_bytes": 1048576,
+  "plan_seal_ms": {
+    "minimum": 55.903,
+    "median": 56.488,
+    "maximum": 62.997,
+    "mean": 57.837599999999995,
+    "sample_stddev": 2.934780366569192
+  },
+  "proof_create_ms": {
+    "minimum": 106.749,
+    "median": 107.298,
+    "maximum": 109.214,
+    "mean": 107.542,
+    "sample_stddev": 0.9911964991867155
+  },
+  "proof_verify_ms": {
+    "minimum": 158.386,
+    "median": 158.492,
+    "maximum": 159.97,
+    "mean": 158.76399999999998,
+    "sample_stddev": 0.675874248658728
+  },
+  "states": [
+    "success_proven"
+  ],
+  "fault_localization": {
+    "injected_bad_offset": 3146505,
+    "reported_bad_offset": 3146505,
+    "exact_offset": true,
+    "localization_ms": 108.267,
+    "return_code": 1,
+    "state": "target_mismatch"
+  },
+  "scope": "file-backed proof benchmark; not a physical USB or Rufus comparison"
+}
