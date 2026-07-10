@@ -10,11 +10,72 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 function Resolve-FullPath {
-    param([Parameter(Mandatory)][string]$Path, [Parameter(Mandatory)][string]$Base)
+    param(
+        [Parameter(Mandatory)][string]$Path,
+        [Parameter(Mandatory)][string]$Base
+    )
+
     if ([System.IO.Path]::IsPathRooted($Path)) {
         return [System.IO.Path]::GetFullPath($Path)
     }
     return [System.IO.Path]::GetFullPath((Join-Path $Base $Path))
+}
+
+function Get-HostMetadata {
+    # Keep evidence collection compatible with Windows PowerShell 5.1 and
+    # older .NET Framework builds. Metadata must never abort qualification.
+    $osDescription = 'unknown'
+    $osArchitecture = 'unknown'
+    $processArchitecture = 'unknown'
+    $is64BitOperatingSystem = $null
+    $is64BitProcess = $null
+
+    try {
+        $osDescription = [Environment]::OSVersion.VersionString
+    } catch {
+        $osDescription = 'unavailable'
+    }
+
+    try {
+        $is64BitOperatingSystem = [Environment]::Is64BitOperatingSystem
+    } catch {
+        $is64BitOperatingSystem = $null
+    }
+
+    try {
+        $is64BitProcess = [Environment]::Is64BitProcess
+    } catch {
+        $is64BitProcess = $null
+    }
+
+    if (-not [string]::IsNullOrWhiteSpace($env:PROCESSOR_ARCHITEW6432)) {
+        $osArchitecture = $env:PROCESSOR_ARCHITEW6432
+    } elseif (-not [string]::IsNullOrWhiteSpace($env:PROCESSOR_ARCHITECTURE)) {
+        $osArchitecture = $env:PROCESSOR_ARCHITECTURE
+    } elseif ($is64BitOperatingSystem -eq $true) {
+        $osArchitecture = '64-bit'
+    } elseif ($is64BitOperatingSystem -eq $false) {
+        $osArchitecture = '32-bit'
+    }
+
+    if (-not [string]::IsNullOrWhiteSpace($env:PROCESSOR_ARCHITECTURE)) {
+        $processArchitecture = $env:PROCESSOR_ARCHITECTURE
+    } elseif ($is64BitProcess -eq $true) {
+        $processArchitecture = '64-bit'
+    } elseif ($is64BitProcess -eq $false) {
+        $processArchitecture = '32-bit'
+    }
+
+    return [ordered]@{
+        computer_name = $env:COMPUTERNAME
+        os_description = $osDescription
+        os_architecture = $osArchitecture
+        process_architecture = $processArchitecture
+        is_64_bit_os = $is64BitOperatingSystem
+        is_64_bit_process = $is64BitProcess
+        powershell = $PSVersionTable.PSVersion.ToString()
+        clr = [Environment]::Version.ToString()
+    }
 }
 
 function Find-VisualStudio {
@@ -226,13 +287,7 @@ $script:Record = [ordered]@{
     cmake_generator = 'Visual Studio 17 2022'
     cmake_architecture = 'x64'
     expected_tests = 7
-    host = [ordered]@{
-        computer_name = $env:COMPUTERNAME
-        os_description = [System.Runtime.InteropServices.RuntimeInformation]::OSDescription
-        os_architecture = [System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture.ToString()
-        process_architecture = [System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture.ToString()
-        powershell = $PSVersionTable.PSVersion.ToString()
-    }
+    host = Get-HostMetadata
     visual_studio_environment = $null
     git_commit = $null
     commands = @()
