@@ -1,0 +1,79 @@
+DEADFLASH WIN32 API-SURFACE VALIDATION
+======================================
+
+DATE
+----
+
+    2026-07-11
+
+SCOPE
+-----
+
+    Host: Linux x86_64 container
+    Compiler: Clang 17
+    Language: strict C17
+    Conditional target: _WIN32
+    Warning policy:
+        -Wall
+        -Wextra
+        -Wpedantic
+        -Wconversion
+        -Wshadow
+        -Werror
+
+COMMAND
+-------
+
+    CC=clang bash scripts/check-win32-surface.sh
+
+FILES CHECKED
+-------------
+
+    src/common.c
+    src/sha256.c
+    src/device.c
+    src/pipeline.c
+    src/fat32.c
+    src/report.c
+    src/attest.c
+    src/proof.c
+    src/main.c
+    src/proof_main.c
+
+RESULT
+------
+
+    PASS
+
+DEFECT FOUND AND FIXED
+----------------------
+
+The first surface run rejected the Windows monotonic timer because signed
+`LONGLONG` counter arithmetic was multiplied by an unsigned constant before the
+explicit conversion. The implementation now:
+
+    - checks QueryPerformanceFrequency success
+    - rejects a zero or negative frequency
+    - checks QueryPerformanceCounter success
+    - rejects a negative counter
+    - converts the counter before unsigned nanosecond arithmetic
+
+POST-FIX REGRESSION
+-------------------
+
+    GCC strict C17       7/7 PASS
+    Clang strict C17     7/7 PASS
+    GCC ASan + UBSan     7/7 PASS
+    file-backed E2E      PASS
+    corruption offset    EXACT PASS
+
+BOUNDARY
+--------
+
+This is a compile-time API and conditional-source surface gate. The local stub
+headers model only the Win32 APIs used by DEADFLASH. It does not link Windows
+libraries, execute Windows code, validate ABI layout, replace the Windows SDK,
+or count as an MSVC pass.
+
+Actual MSVC build/test and sacrificial Windows physical-device qualification
+remain mandatory release gates.
