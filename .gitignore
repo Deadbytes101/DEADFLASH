@@ -1,0 +1,16 @@
+/build/
+/out/
+*.o
+*.obj
+*.a
+*.lib
+*.exe
+*.pdb
+*.ilk
+*.img
+*.bin
+*.json
+*.csv
+.vs/
+.vscode/
+CMakeUserPresets.json
