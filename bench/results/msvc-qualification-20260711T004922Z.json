@@ -1,0 +1,286 @@
+{
+  "schema": "deadflash.msvc-qualification.v1",
+  "created_utc": "2026-07-11T00:49:22.043729Z",
+  "result": "pass",
+  "source_dir": "D:\\TECHNICAL\\DEADFLASH",
+  "build_dir": "D:\\TECHNICAL\\DEADFLASH\\build-msvc-qualification",
+  "evidence_path": "D:\\TECHNICAL\\DEADFLASH\\bench\\results\\msvc-qualification-20260711T004922Z.json",
+  "log_directory": "C:\\Users\\DEADBYTE\\AppData\\Local\\Temp\\deadflash-msvc-20260711T004922Z",
+  "cmake_generator": "Visual Studio 18 2026",
+  "cmake_architecture": "x64",
+  "expected_tests": 7,
+  "host": {
+    "computer_name": "DESKTOP-VI6B955",
+    "os_description": "Windows-11-10.0.26200-SP0",
+    "os_architecture": "AMD64",
+    "process_architecture": "AMD64",
+    "is_64_bit_process": true,
+    "python": "3.13.13",
+    "python_executable": "C:\\Users\\DEADBYTE\\AppData\\Local\\Programs\\Python\\Python313\\python.exe"
+  },
+  "visual_studio_environment": {
+    "source": "vswhere",
+    "installation_path": "C:\\Program Files\\Microsoft Visual Studio\\18\\Community",
+    "installation_version": "18.5.11716.220",
+    "major_version": 18,
+    "vswhere": "C:\\Program Files (x86)\\Microsoft Visual Studio\\Installer\\vswhere.exe",
+    "cl": "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36223\\bin\\Hostx64\\x64\\cl.exe",
+    "bundled_cmake": "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\Common7\\IDE\\CommonExtensions\\Microsoft\\CMake\\CMake\\bin\\cmake.exe",
+    "bundled_ctest": "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\Common7\\IDE\\CommonExtensions\\Microsoft\\CMake\\CMake\\bin\\ctest.exe"
+  },
+  "build_tools": {
+    "cmake_source": "visual-studio-bundled",
+    "cmake": "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\Common7\\IDE\\CommonExtensions\\Microsoft\\CMake\\CMake\\bin\\cmake.exe",
+    "ctest": "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\Common7\\IDE\\CommonExtensions\\Microsoft\\CMake\\CMake\\bin\\ctest.exe",
+    "python": "C:\\Users\\DEADBYTE\\AppData\\Local\\Programs\\Python\\Python313\\python.exe"
+  },
+  "git_commit": "d118cd13569164009e59ca5db6e5c9a68d6e405e",
+  "commands": [
+    {
+      "name": "cmake-version",
+      "executable": "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\Common7\\IDE\\CommonExtensions\\Microsoft\\CMake\\CMake\\bin\\cmake.exe",
+      "arguments": [
+        "--version"
+      ],
+      "working_directory": "D:\\TECHNICAL\\DEADFLASH",
+      "exit_code": 0,
+      "timed_out": false,
+      "timeout_seconds": 60,
+      "elapsed_ms": 1002.511,
+      "stdout": "cmake version 4.2.3-msvc3\n\nCMake suite maintained and supported by Kitware (kitware.com/cmake).\n",
+      "stderr": "",
+      "start_error": null
+    },
+    {
+      "name": "cmake-help",
+      "executable": "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\Common7\\IDE\\CommonExtensions\\Microsoft\\CMake\\CMake\\bin\\cmake.exe",
+      "arguments": [
+        "--help"
+      ],
+      "working_directory": "D:\\TECHNICAL\\DEADFLASH",
+      "exit_code": 0,
+      "timed_out": false,
+      "timeout_seconds": 60,
+      "elapsed_ms": 1002.489,
+      "stdout": "Usage\n\n  cmake [options] <path-to-source>\n  cmake [options] <path-to-existing-build>\n  cmake [options] -S <path-to-source> -B <path-to-build>\n\nSpecify a source directory to (re-)generate a build system for it in the\ncurrent working directory.  Specify an existing build directory to\nre-generate its build system.\n\nOptions\n  -S <path-to-source>          = Explicitly specify a source directory.\n  -B <path-to-build>           = Explicitly specify a build directory.\n  -C <initial-cache>           = Pre-load a script to populate the cache.\n  -D <var>[:<type>]=<value>    = Create or update a cmake cache entry.\n  -U <globbing_expr>           = Remove matching entries from CMake cache.\n  -G <generator-name>          = Specify a build system generator.\n  -T <toolset-name>            = Specify toolset name if supported by\n                                 generator.\n  -A <platform-name>           = Specify platform name if supported by\n                                 generator.\n  --toolchain <file>           = Specify toolchain file\n                                 [CMAKE_TOOLCHAIN_FILE].\n  --install-prefix <directory> = Specify install directory\n                                 [CMAKE_INSTALL_PREFIX].\n  --project-file <project-file-name>\n                               = Specify an alternate project file name.\n  -Wdev                        = Enable developer warnings.\n  -Wno-dev                     = Suppress developer warnings.\n  -Werror=dev                  = Make developer warnings errors.\n  -Wno-error=dev               = Make developer warnings not errors.\n  -Wdeprecated                 = Enable deprecation warnings.\n  -Wno-deprecated              = Suppress deprecation warnings.\n  -Werror=deprecated           = Make deprecated macro and function warnings\n                                 errors.\n  -Wno-error=deprecated        = Make deprecated macro and function warnings\n                                 not errors.\n  --preset <preset>,--preset=<preset>\n                               = Specify a configure preset.\n  --list-presets[=<type>]      = List available presets.\n  --workflow [<options>]       = Run a workflow preset.\n  -E                           = CMake command mode.  Run \"cmake -E\" for a\n                                 summary of commands.\n  -L[A][H]                     = List non-advanced cached variables.\n  -LR[A][H] <regex>            = Show cached variables that match the regex.\n  --fresh                      = Configure a fresh build tree, removing any\n                                 existing cache file.\n  --build <dir>                = Build a CMake-generated project binary tree.\n                                 Run \"cmake --build\" to see compatible\n                                 options and a quick help.\n  --install <dir>              = Install a CMake-generated project binary\n                                 tree.  Run \"cmake --install\" to see\n                                 compatible options and a quick help.\n  --open <dir>                 = Open generated project in the associated\n                                 application.\n  -N                           = View mode only.\n  -P <file>                    = Process script mode.\n  --find-package               = Legacy pkg-config like mode.  Do not use.\n  --graphviz=<file>            = Generate graphviz of dependencies, see\n                                 CMakeGraphVizOptions.cmake for more.\n  --system-information [file]  = Dump information about this system.\n  --print-config-dir           = Print CMake config directory for user-wide\n                                 FileAPI queries.\n  --log-level=<ERROR|WARNING|NOTICE|STATUS|VERBOSE|DEBUG|TRACE>\n                               = Set the verbosity of messages from CMake\n                                 files.  --loglevel is also accepted for\n                                 backward compatibility reasons.\n  --log-context                = Prepend log messages with context, if given\n  --debug-trycompile           = Do not delete the try_compile build tree.\n                                 Only useful on one try_compile at a time.\n  --debug-output               = Put cmake in a debug mode.\n  --debug-find                 = Put cmake find in a debug mode.\n  --debug-find-pkg=<pkg-name>[,...]\n                               = Limit cmake debug-find to the\n                                 comma-separated list of packages\n  --debug-find-var=<var-name>[,...]\n                               = Limit cmake debug-find to the\n                                 comma-separated list of result variables\n  --trace                      = Put cmake in trace mode.\n  --trace-expand               = Put cmake in trace mode with variable\n                                 expansion.\n  --trace-format=<human|json-v1>\n                               = Set the output format of the trace.\n  --trace-source=<file>        = Trace only this CMake file/module.  Multiple\n                                 options allowed.\n  --trace-redirect=<file>      = Redirect trace output to a file instead of\n                                 stderr.\n  --warn-uninitialized         = Warn about uninitialized values.\n  --no-warn-unused-cli         = Don't warn about command line options.\n  --check-system-vars          = Find problems with variable usage in system\n                                 files.\n  --compile-no-warning-as-error= Ignore COMPILE_WARNING_AS_ERROR property and\n                                 CMAKE_COMPILE_WARNING_AS_ERROR variable.\n  --link-no-warning-as-error   = Ignore LINK_WARNING_AS_ERROR property and\n                                 CMAKE_LINK_WARNING_AS_ERROR variable.\n  --profiling-format=<fmt>     = Output data for profiling CMake scripts.\n                                 Supported formats: google-trace\n  --profiling-output=<file>    = Select an output path for the profiling data\n                                 enabled through --profiling-format.\n  -h,-H,--help,-help,-usage,/? = Print usage information and exit.\n  --version,-version,/V [<file>]\n                               = Print version number and exit.\n  --help <keyword> [<file>]    = Print help for one keyword and exit.\n  --help-full [<file>]         = Print all help manuals and exit.\n  --help-manual <man> [<file>] = Print one help manual and exit.\n  --help-manual-list [<file>]  = List help manuals available and exit.\n  --help-command <cmd> [<file>]= Print help for one command and exit.\n  --help-command-list [<file>] = List commands with help available and exit.\n  --help-commands [<file>]     = Print cmake-commands manual and exit.\n  --help-module <mod> [<file>] = Print help for one module and exit.\n  --help-module-list [<file>]  = List modules with help available and exit.\n  --help-modules [<file>]      = Print cmake-modules manual and exit.\n  --help-policy <cmp> [<file>] = Print help for one policy and exit.\n  --help-policy-list [<file>]  = List policies with help available and exit.\n  --help-policies [<file>]     = Print cmake-policies manual and exit.\n  --help-property <prop> [<file>]\n                               = Print help for one property and exit.\n  --help-property-list [<file>]= List properties with help available and\n                                 exit.\n  --help-properties [<file>]   = Print cmake-properties manual and exit.\n  --help-variable var [<file>] = Print help for one variable and exit.\n  --help-variable-list [<file>]= List variables with help available and exit.\n  --help-variables [<file>]    = Print cmake-variables manual and exit.\n\nGenerators\n\nThe following generators are available on this platform (* marks default):\n* Visual Studio 18 2026        = Generates Visual Studio 2026 project files.\n                                 Use -A option to specify architecture.\n  Visual Studio 17 2022        = Generates Visual Studio 2022 project files.\n                                 Use -A option to specify architecture.\n  Visual Studio 16 2019        = Generates Visual Studio 2019 project files.\n                                 Use -A option to specify architecture.\n  Visual Studio 15 2017        = Generates Visual Studio 2017 project files.\n                                 Use -A option to specify architecture.\n  Visual Studio 14 2015        = Deprecated.  Generates Visual Studio 2015\n                                 project files.  Use -A option to specify\n                                 architecture.\n  Borland Makefiles            = Generates Borland makefiles.\n  NMake Makefiles              = Generates NMake makefiles.\n  NMake Makefiles JOM          = Generates JOM makefiles.\n  MSYS Makefiles               = Generates MSYS makefiles.\n  MinGW Makefiles              = Generates a make file for use with\n                                 mingw32-make.\n  Green Hills MULTI            = Generates Green Hills MULTI files\n                                 (experimental, work-in-progress).\n  Unix Makefiles               = Generates standard UNIX makefiles.\n  Ninja                        = Generates build.ninja files.\n  Ninja Multi-Config           = Generates build-<Config>.ninja files.\n  FASTBuild                    = Generates fbuild.bff files.\n  Watcom WMake                 = Generates Watcom WMake makefiles.\n  CodeBlocks - MinGW Makefiles = Generates CodeBlocks project files\n                                 (deprecated).\n  CodeBlocks - NMake Makefiles = Generates CodeBlocks project files\n                                 (deprecated).\n  CodeBlocks - NMake Makefiles JOM\n                               = Generates CodeBlocks project files\n                                 (deprecated).\n  CodeBlocks - Ninja           = Generates CodeBlocks project files\n                                 (deprecated).\n  CodeBlocks - Unix Makefiles  = Generates CodeBlocks project files\n                                 (deprecated).\n  CodeLite - MinGW Makefiles   = Generates CodeLite project files\n                                 (deprecated).\n  CodeLite - NMake Makefiles   = Generates CodeLite project files\n                                 (deprecated).\n  CodeLite - Ninja             = Generates CodeLite project files\n                                 (deprecated).\n  CodeLite - Unix Makefiles    = Generates CodeLite project files\n                                 (deprecated).\n  Eclipse CDT4 - NMake Makefiles\n                               = Generates Eclipse CDT 4.0 project files\n                                 (deprecated).\n  Eclipse CDT4 - MinGW Makefiles\n                               = Generates Eclipse CDT 4.0 project files\n                                 (deprecated).\n  Eclipse CDT4 - Ninja         = Generates Eclipse CDT 4.0 project files\n                                 (deprecated).\n  Eclipse CDT4 - Unix Makefiles= Generates Eclipse CDT 4.0 project files\n                                 (deprecated).\n  Kate - MinGW Makefiles       = Generates Kate project files (deprecated).\n  Kate - NMake Makefiles       = Generates Kate project files (deprecated).\n  Kate - Ninja                 = Generates Kate project files (deprecated).\n  Kate - Ninja Multi-Config    = Generates Kate project files (deprecated).\n  Kate - Unix Makefiles        = Generates Kate project files (deprecated).\n  Sublime Text 2 - MinGW Makefiles\n                               = Generates Sublime Text 2 project files\n                                 (deprecated).\n  Sublime Text 2 - NMake Makefiles\n                               = Generates Sublime Text 2 project files\n                                 (deprecated).\n  Sublime Text 2 - Ninja       = Generates Sublime Text 2 project files\n                                 (deprecated).\n  Sublime Text 2 - Unix Makefiles\n                               = Generates Sublime Text 2 project files\n                                 (deprecated).\n\n",
+      "stderr": "",
+      "start_error": null
+    },
+    {
+      "name": "cl-version",
+      "executable": "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36223\\bin\\Hostx64\\x64\\cl.exe",
+      "arguments": [
+        "/nologo",
+        "/Bv",
+        "/TC",
+        "/Zs",
+        "C:\\Users\\DEADBYTE\\AppData\\Local\\Temp\\deadflash-msvc-20260711T004922Z\\cl-version-probe.c"
+      ],
+      "working_directory": "D:\\TECHNICAL\\DEADFLASH",
+      "exit_code": 0,
+      "timed_out": false,
+      "timeout_seconds": 60,
+      "elapsed_ms": 1002.847,
+      "stdout": "cl-version-probe.c\n",
+      "stderr": "Compiler Passes:\n C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36223\\bin\\Hostx64\\x64\\cl.exe:        Version 19.51.36223.2\n C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36223\\bin\\Hostx64\\x64\\c1.dll:        Version 19.51.36223.2\n C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36223\\bin\\Hostx64\\x64\\c1xx.dll:      Version 19.51.36223.2\n C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36223\\bin\\Hostx64\\x64\\c2.dll:        Version 19.51.36223.2\n C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36223\\bin\\Hostx64\\x64\\c1xx.dll:      Version 19.51.36223.2\n C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36223\\bin\\Hostx64\\x64\\link.exe:      Version 14.51.36223.2\n C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36223\\bin\\Hostx64\\x64\\mspdb140.dll:  Version 14.51.36223.2\n C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36223\\bin\\Hostx64\\x64\\1033\\clui.dll: Version 19.51.36223.2\n\n",
+      "start_error": null
+    },
+    {
+      "name": "cmake-configure",
+      "executable": "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\Common7\\IDE\\CommonExtensions\\Microsoft\\CMake\\CMake\\bin\\cmake.exe",
+      "arguments": [
+        "-S",
+        "D:\\TECHNICAL\\DEADFLASH",
+        "-B",
+        "D:\\TECHNICAL\\DEADFLASH\\build-msvc-qualification",
+        "-G",
+        "Visual Studio 18 2026",
+        "-A",
+        "x64",
+        "-DDEADFLASH_WARNINGS_AS_ERRORS=ON",
+        "-DDEADFLASH_BUILD_TESTS=ON"
+      ],
+      "working_directory": "D:\\TECHNICAL\\DEADFLASH",
+      "exit_code": 0,
+      "timed_out": false,
+      "timeout_seconds": 300,
+      "elapsed_ms": 2003.091,
+      "stdout": "-- Selecting Windows SDK version 10.0.26100.0 to target Windows 10.0.26200.\n-- The C compiler identification is MSVC 19.50.35729.0\n-- Detecting C compiler ABI info\n-- Detecting C compiler ABI info - done\n-- Check for working C compiler: C:/Program Files/Microsoft Visual Studio/18/Community/VC/Tools/MSVC/14.50.35717/bin/Hostx64/x64/cl.exe - skipped\n-- Detecting C compile features\n-- Detecting C compile features - done\n-- Configuring done (1.1s)\n-- Generating done (0.1s)\n-- Build files have been written to: D:/TECHNICAL/DEADFLASH/build-msvc-qualification\n",
+      "stderr": "",
+      "start_error": null
+    },
+    {
+      "name": "cmake-build",
+      "executable": "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\Common7\\IDE\\CommonExtensions\\Microsoft\\CMake\\CMake\\bin\\cmake.exe",
+      "arguments": [
+        "--build",
+        "D:\\TECHNICAL\\DEADFLASH\\build-msvc-qualification",
+        "--config",
+        "Release",
+        "--parallel"
+      ],
+      "working_directory": "D:\\TECHNICAL\\DEADFLASH",
+      "exit_code": 0,
+      "timed_out": false,
+      "timeout_seconds": 1800,
+      "elapsed_ms": 4004.516,
+      "stdout": "MSBuild version 18.5.4+cb4e32d21 for .NET Framework\n\n  1>Checking Build System\n  Building Custom Rule D:/TECHNICAL/DEADFLASH/CMakeLists.txt\n  common.c\n  sha256.c\n  device.c\n  pipeline.c\n  fat32.c\n  report.c\n  attest.c\n  proof.c\n  Generating Code...\n  deadflash_core.vcxproj -> D:\\TECHNICAL\\DEADFLASH\\build-msvc-qualification\\Release\\deadflash_core.lib\n  Building Custom Rule D:/TECHNICAL/DEADFLASH/CMakeLists.txt\n  Building Custom Rule D:/TECHNICAL/DEADFLASH/CMakeLists.txt\n  Building Custom Rule D:/TECHNICAL/DEADFLASH/CMakeLists.txt\n  Building Custom Rule D:/TECHNICAL/DEADFLASH/CMakeLists.txt\n  Building Custom Rule D:/TECHNICAL/DEADFLASH/CMakeLists.txt\n  Building Custom Rule D:/TECHNICAL/DEADFLASH/CMakeLists.txt\n  Building Custom Rule D:/TECHNICAL/DEADFLASH/CMakeLists.txt\n  Building Custom Rule D:/TECHNICAL/DEADFLASH/CMakeLists.txt\n  Building Custom Rule D:/TECHNICAL/DEADFLASH/CMakeLists.txt\n  Building Custom Rule D:/TECHNICAL/DEADFLASH/CMakeLists.txt\n  test_pipeline.c\n  test_fat32.c\n  proof_main.c\n  test_sha256.c\n  gui_win32_bootstrap.c\n  test_proof.c\n  test_fingerprint.c\n  test_identity.c\n  main.c\n  test_sha256.vcxproj -> D:\\TECHNICAL\\DEADFLASH\\build-msvc-qualification\\Release\\test_sha256.exe\n  test_fat32.vcxproj -> D:\\TECHNICAL\\DEADFLASH\\build-msvc-qualification\\Release\\test_fat32.exe\n  test_pipeline.vcxproj -> D:\\TECHNICAL\\DEADFLASH\\build-msvc-qualification\\Release\\test_pipeline.exe\n  test_proof.vcxproj -> D:\\TECHNICAL\\DEADFLASH\\build-msvc-qualification\\Release\\test_proof.exe\n  test_fingerprint.vcxproj -> D:\\TECHNICAL\\DEADFLASH\\build-msvc-qualification\\Release\\test_fingerprint.exe\n  test_identity.vcxproj -> D:\\TECHNICAL\\DEADFLASH\\build-msvc-qualification\\Release\\test_identity.exe\n  deadflash-proof.vcxproj -> D:\\TECHNICAL\\DEADFLASH\\build-msvc-qualification\\Release\\deadflash-proof.exe\n  deadflash-gui.vcxproj -> D:\\TECHNICAL\\DEADFLASH\\build-msvc-qualification\\Release\\deadflash-gui.exe\n  test_attest.c\n  deadflash.vcxproj -> D:\\TECHNICAL\\DEADFLASH\\build-msvc-qualification\\Release\\deadflash.exe\n  test_attest.vcxproj -> D:\\TECHNICAL\\DEADFLASH\\build-msvc-qualification\\Release\\test_attest.exe\n  Building Custom Rule D:/TECHNICAL/DEADFLASH/CMakeLists.txt\n",
+      "stderr": "",
+      "start_error": null
+    },
+    {
+      "name": "ctest",
+      "executable": "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\Common7\\IDE\\CommonExtensions\\Microsoft\\CMake\\CMake\\bin\\ctest.exe",
+      "arguments": [
+        "--test-dir",
+        "D:\\TECHNICAL\\DEADFLASH\\build-msvc-qualification",
+        "-C",
+        "Release",
+        "--output-on-failure"
+      ],
+      "working_directory": "D:\\TECHNICAL\\DEADFLASH",
+      "exit_code": 0,
+      "timed_out": false,
+      "timeout_seconds": 600,
+      "elapsed_ms": 1002.57,
+      "stdout": "Test project D:/TECHNICAL/DEADFLASH/build-msvc-qualification\n    Start 1: sha256\n1/7 Test #1: sha256 ...........................   Passed    0.01 sec\n    Start 2: pipeline\n2/7 Test #2: pipeline .........................   Passed    0.22 sec\n    Start 3: fat32\n3/7 Test #3: fat32 ............................   Passed    0.01 sec\n    Start 4: identity\n4/7 Test #4: identity .........................   Passed    0.01 sec\n    Start 5: attest\n5/7 Test #5: attest ...........................   Passed    0.09 sec\n    Start 6: proof\n6/7 Test #6: proof ............................   Passed    0.20 sec\n    Start 7: fingerprint\n7/7 Test #7: fingerprint ......................   Passed    0.01 sec\n\n100% tests passed, 0 tests failed out of 7\n\nTotal Test time (real) =   0.56 sec\n",
+      "stderr": "",
+      "start_error": null
+    },
+    {
+      "name": "e2e-proof",
+      "executable": "C:\\Users\\DEADBYTE\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
+      "arguments": [
+        "D:\\TECHNICAL\\DEADFLASH\\scripts\\e2e-proof.py",
+        "--deadflash",
+        "D:\\TECHNICAL\\DEADFLASH\\build-msvc-qualification\\Release\\deadflash.exe",
+        "--proof",
+        "D:\\TECHNICAL\\DEADFLASH\\build-msvc-qualification\\Release\\deadflash-proof.exe",
+        "--work-dir",
+        "D:\\TECHNICAL\\DEADFLASH\\build-msvc-qualification\\e2e-msvc",
+        "--summary",
+        "D:\\TECHNICAL\\DEADFLASH\\bench\\results\\msvc-e2e-20260711T004922Z.json"
+      ],
+      "working_directory": "D:\\TECHNICAL\\DEADFLASH",
+      "exit_code": 0,
+      "timed_out": false,
+      "timeout_seconds": 900,
+      "elapsed_ms": 2002.135,
+      "stdout": "{\n  \"schema\": \"deadflash.e2e-proof.v1\",\n  \"platform\": \"win32\",\n  \"python\": \"3.13.13 (tags/v3.13.13:01104ce, Apr  7 2026, 19:25:48) [MSC v.1944 64 bit (AMD64)]\",\n  \"source_size\": 6291579,\n  \"source_sha256\": \"8dcc87bfefd38f65a76bc76b5fd4fc79bbb8f6b570a2a7dfe70a4cf4f718474e\",\n  \"plan_seal\": \"96701eef8be7f9ae752f732fd76341ceeb300e6a200932150755d48b5f880583\",\n  \"chunk\": \"1MiB\",\n  \"write_state\": \"success_verified\",\n  \"proof_state\": \"success_proven\",\n  \"corruption_state\": \"target_mismatch\",\n  \"injected_bad_offset\": 3145806,\n  \"reported_bad_offset\": 3145806,\n  \"original_byte\": 89,\n  \"replacement_byte\": 252,\n  \"commands\": [\n    {\n      \"argv\": [\n        \"D:\\\\TECHNICAL\\\\DEADFLASH\\\\build-msvc-qualification\\\\Release\\\\deadflash.exe\",\n        \"version\"\n      ],\n      \"returncode\": 0,\n      \"elapsed_ms\": 6.904,\n      \"stdout\": \"DEADFLASH 1.0.0\\n\",\n      \"stderr\": \"\"\n    },\n    {\n      \"argv\": [\n        \"D:\\\\TECHNICAL\\\\DEADFLASH\\\\build-msvc-qualification\\\\Release\\\\deadflash-proof.exe\",\n        \"version\"\n      ],\n      \"returncode\": 0,\n      \"elapsed_ms\": 5.924,\n      \"stdout\": \"DEADFLASH PROOF 1.0.0\\n\",\n      \"stderr\": \"\"\n    },\n    {\n      \"argv\": [\n        \"D:\\\\TECHNICAL\\\\DEADFLASH\\\\build-msvc-qualification\\\\Release\\\\deadflash-proof.exe\",\n        \"seal\",\n        \"D:\\\\TECHNICAL\\\\DEADFLASH\\\\build-msvc-qualification\\\\e2e-msvc\\\\source.img\",\n        \"D:\\\\TECHNICAL\\\\DEADFLASH\\\\build-msvc-qualification\\\\e2e-msvc\\\\target.img\",\n        \"--verify\",\n        \"full\",\n        \"--buffer\",\n        \"1MiB\"\n      ],\n      \"returncode\": 0,\n      \"elapsed_ms\": 23.912,\n      \"stdout\": \"SOURCE_SIZE_BYTES  : 6291579\\nSOURCE_SHA256      : 8dcc87bfefd38f65a76bc76b5fd4fc79bbb8f6b570a2a7dfe70a4cf4f718474e\\nTARGET_TOKEN       : 880f97eed04beae5\\nTARGET_SIZE_BYTES  : 6291579\\nVERIFY_MODE        : 2\\nBUFFER_SIZE        : 1048576\\nPLAN_SEAL          : 96701eef8be7f9ae752f732fd76341ceeb300e6a200932150755d48b5f880583\\n\",\n      \"stderr\": \"\"\n    },\n    {\n      \"argv\": [\n        \"D:\\\\TECHNICAL\\\\DEADFLASH\\\\build-msvc-qualification\\\\Release\\\\deadflash-proof.exe\",\n        \"write\",\n        \"D:\\\\TECHNICAL\\\\DEADFLASH\\\\build-msvc-qualification\\\\e2e-msvc\\\\source.img\",\n        \"D:\\\\TECHNICAL\\\\DEADFLASH\\\\build-msvc-qualification\\\\e2e-msvc\\\\target.img\",\n        \"--seal\",\n        \"96701eef8be7f9ae752f732fd76341ceeb300e6a200932150755d48b5f880583\",\n        \"--verify\",\n        \"full\",\n        \"--buffer\",\n        \"1MiB\",\n        \"--proof\",\n        \"D:\\\\TECHNICAL\\\\DEADFLASH\\\\build-msvc-qualification\\\\e2e-msvc\\\\source.dfp\",\n        \"--chunk\",\n        \"1MiB\"\n      ],\n      \"returncode\": 0,\n      \"elapsed_ms\": 214.028,\n      \"stdout\": \"STATE              : success_verified\\nBYTES_WRITTEN      : 6291579\\nBYTES_VERIFIED     : 6291579\\nTOTAL_MS           : 86.935\\nPROOF_STATE        : success_proven\\nPROOF_BYTES        : 6291579\\n\",\n      \"stderr\": \"\"\n    },\n    {\n      \"argv\": [\n        \"D:\\\\TECHNICAL\\\\DEADFLASH\\\\build-msvc-qualification\\\\Release\\\\deadflash-proof.exe\",\n        \"verify\",\n        \"D:\\\\TECHNICAL\\\\DEADFLASH\\\\build-msvc-qualification\\\\e2e-msvc\\\\source.dfp\",\n        \"D:\\\\TECHNICAL\\\\DEADFLASH\\\\build-msvc-qualification\\\\e2e-msvc\\\\source.img\",\n        \"D:\\\\TECHNICAL\\\\DEADFLASH\\\\build-msvc-qualification\\\\e2e-msvc\\\\target.img\"\n      ],\n      \"returncode\": 0,\n      \"elapsed_ms\": 67.099,\n      \"stdout\": \"STATE              : success_proven\\nBYTES_VERIFIED     : 6291579\\nCHUNKS_VERIFIED    : 7\\n\",\n      \"stderr\": \"\"\n    },\n    {\n      \"argv\": [\n        \"D:\\\\TECHNICAL\\\\DEADFLASH\\\\build-msvc-qualification\\\\Release\\\\deadflash-proof.exe\",\n        \"verify\",\n        \"D:\\\\TECHNICAL\\\\DEADFLASH\\\\build-msvc-qualification\\\\e2e-msvc\\\\source.dfp\",\n        \"D:\\\\TECHNICAL\\\\DEADFLASH\\\\build-msvc-qualification\\\\e2e-msvc\\\\source.img\",\n        \"D:\\\\TECHNICAL\\\\DEADFLASH\\\\build-msvc-qualification\\\\e2e-msvc\\\\target.img\"\n      ],\n      \"returncode\": 1,\n      \"elapsed_ms\": 44.538,\n      \"stdout\": \"STATE              : target_mismatch\\nBYTES_VERIFIED     : 3145728\\nCHUNKS_VERIFIED    : 3\\nFIRST_BAD_OFFSET   : 3145806\\n\",\n      \"stderr\": \"ERROR[verification_mismatch]: target mismatch at byte offset 3145806\\n\"\n    }\n  ]\n}\n",
+      "stderr": "",
+      "start_error": null
+    }
+  ],
+  "tests": {
+    "expected": 7,
+    "passed": 7,
+    "raw_summary": [
+      "100% tests passed, 0 tests failed out of 7",
+      "Total Test time (real) =   0.56 sec"
+    ]
+  },
+  "e2e": {
+    "schema": "deadflash.e2e-proof.v1",
+    "platform": "win32",
+    "python": "3.13.13 (tags/v3.13.13:01104ce, Apr  7 2026, 19:25:48) [MSC v.1944 64 bit (AMD64)]",
+    "source_size": 6291579,
+    "source_sha256": "8dcc87bfefd38f65a76bc76b5fd4fc79bbb8f6b570a2a7dfe70a4cf4f718474e",
+    "plan_seal": "96701eef8be7f9ae752f732fd76341ceeb300e6a200932150755d48b5f880583",
+    "chunk": "1MiB",
+    "write_state": "success_verified",
+    "proof_state": "success_proven",
+    "corruption_state": "target_mismatch",
+    "injected_bad_offset": 3145806,
+    "reported_bad_offset": 3145806,
+    "original_byte": 89,
+    "replacement_byte": 252,
+    "commands": [
+      {
+        "argv": [
+          "D:\\TECHNICAL\\DEADFLASH\\build-msvc-qualification\\Release\\deadflash.exe",
+          "version"
+        ],
+        "returncode": 0,
+        "elapsed_ms": 6.904,
+        "stdout": "DEADFLASH 1.0.0\n",
+        "stderr": ""
+      },
+      {
+        "argv": [
+          "D:\\TECHNICAL\\DEADFLASH\\build-msvc-qualification\\Release\\deadflash-proof.exe",
+          "version"
+        ],
+        "returncode": 0,
+        "elapsed_ms": 5.924,
+        "stdout": "DEADFLASH PROOF 1.0.0\n",
+        "stderr": ""
+      },
+      {
+        "argv": [
+          "D:\\TECHNICAL\\DEADFLASH\\build-msvc-qualification\\Release\\deadflash-proof.exe",
+          "seal",
+          "D:\\TECHNICAL\\DEADFLASH\\build-msvc-qualification\\e2e-msvc\\source.img",
+          "D:\\TECHNICAL\\DEADFLASH\\build-msvc-qualification\\e2e-msvc\\target.img",
+          "--verify",
+          "full",
+          "--buffer",
+          "1MiB"
+        ],
+        "returncode": 0,
+        "elapsed_ms": 23.912,
+        "stdout": "SOURCE_SIZE_BYTES  : 6291579\nSOURCE_SHA256      : 8dcc87bfefd38f65a76bc76b5fd4fc79bbb8f6b570a2a7dfe70a4cf4f718474e\nTARGET_TOKEN       : 880f97eed04beae5\nTARGET_SIZE_BYTES  : 6291579\nVERIFY_MODE        : 2\nBUFFER_SIZE        : 1048576\nPLAN_SEAL          : 96701eef8be7f9ae752f732fd76341ceeb300e6a200932150755d48b5f880583\n",
+        "stderr": ""
+      },
+      {
+        "argv": [
+          "D:\\TECHNICAL\\DEADFLASH\\build-msvc-qualification\\Release\\deadflash-proof.exe",
+          "write",
+          "D:\\TECHNICAL\\DEADFLASH\\build-msvc-qualification\\e2e-msvc\\source.img",
+          "D:\\TECHNICAL\\DEADFLASH\\build-msvc-qualification\\e2e-msvc\\target.img",
+          "--seal",
+          "96701eef8be7f9ae752f732fd76341ceeb300e6a200932150755d48b5f880583",
+          "--verify",
+          "full",
+          "--buffer",
+          "1MiB",
+          "--proof",
+          "D:\\TECHNICAL\\DEADFLASH\\build-msvc-qualification\\e2e-msvc\\source.dfp",
+          "--chunk",
+          "1MiB"
+        ],
+        "returncode": 0,
+        "elapsed_ms": 214.028,
+        "stdout": "STATE              : success_verified\nBYTES_WRITTEN      : 6291579\nBYTES_VERIFIED     : 6291579\nTOTAL_MS           : 86.935\nPROOF_STATE        : success_proven\nPROOF_BYTES        : 6291579\n",
+        "stderr": ""
+      },
+      {
+        "argv": [
+          "D:\\TECHNICAL\\DEADFLASH\\build-msvc-qualification\\Release\\deadflash-proof.exe",
+          "verify",
+          "D:\\TECHNICAL\\DEADFLASH\\build-msvc-qualification\\e2e-msvc\\source.dfp",
+          "D:\\TECHNICAL\\DEADFLASH\\build-msvc-qualification\\e2e-msvc\\source.img",
+          "D:\\TECHNICAL\\DEADFLASH\\build-msvc-qualification\\e2e-msvc\\target.img"
+        ],
+        "returncode": 0,
+        "elapsed_ms": 67.099,
+        "stdout": "STATE              : success_proven\nBYTES_VERIFIED     : 6291579\nCHUNKS_VERIFIED    : 7\n",
+        "stderr": ""
+      },
+      {
+        "argv": [
+          "D:\\TECHNICAL\\DEADFLASH\\build-msvc-qualification\\Release\\deadflash-proof.exe",
+          "verify",
+          "D:\\TECHNICAL\\DEADFLASH\\build-msvc-qualification\\e2e-msvc\\source.dfp",
+          "D:\\TECHNICAL\\DEADFLASH\\build-msvc-qualification\\e2e-msvc\\source.img",
+          "D:\\TECHNICAL\\DEADFLASH\\build-msvc-qualification\\e2e-msvc\\target.img"
+        ],
+        "returncode": 1,
+        "elapsed_ms": 44.538,
+        "stdout": "STATE              : target_mismatch\nBYTES_VERIFIED     : 3145728\nCHUNKS_VERIFIED    : 3\nFIRST_BAD_OFFSET   : 3145806\n",
+        "stderr": "ERROR[verification_mismatch]: target mismatch at byte offset 3145806\n"
+      }
+    ]
+  },
+  "error": null,
+  "completed_utc": "2026-07-11T00:49:34.214601Z"
+}
