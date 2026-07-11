@@ -10,12 +10,12 @@ and reproducible measurements.
 VERSION
 -------
 
-    1.0.0 CANDIDATE
+    1.0.0 FINAL
 
 STATUS
 ------
 
-    CORE + FINAL NATIVE WINDOWS 1.0.0 UX UNDER QUALIFICATION
+    CORE + FINAL NATIVE WINDOWS 1.0.0 IMPLEMENTATION FROZEN
 
     - Raw IMG/ISO byte-for-byte writing
     - SHA-256 source hashing
@@ -37,13 +37,29 @@ STATUS
     - Real phase and byte progress from the storage core
     - Attested destructive confirmation and plan-seal evidence
     - MSVC + Windows SDK Release build validated: 7/7 + proof E2E
-    - Corrected-head final-UX requalification still required
-    - Physical-device qualification still required
+    - First physical USB write, flush, and full-readback checkpoint passed
+    - Release publication remains evidence-gated
 
-DEADFLASH does not claim full Rufus feature parity. Version 1.0.0 is the
-candidate destructive-storage core plus a native Windows operator surface.
+DEADFLASH does not claim full Rufus feature parity. Version 1.0.0 is the final
+implementation of the destructive-storage core plus the native Windows operator
+surface. Release publication remains gated by CI visibility, destructive fault
+qualification, reconnect and power-cycle proof, and equal-class Rufus records.
 It does not perform Windows ISO file extraction, WIM splitting, persistence
 partitions, Windows To Go, or firmware boot emulation.
+
+PHYSICAL QUALIFICATION CHECKPOINT
+---------------------------------
+
+The retained Windows GUI run wrote a 2,685,403,136-byte image to a removable
+SanDisk 3.2Gen1 physical device, flushed the device, and completed full readback
+verification. The run reported zero retries, zero mismatches, and identical
+source and target SHA-256 values.
+
+    bench/results/deadflash-evidence-20260711-155239.json
+
+This checkpoint proves one complete physical write path. It does not replace the
+remaining unplug, reconnect, power-cycle, fault-injection, multi-controller, and
+Rufus equal-class release gates.
 
 COMPETITIVE EDGE
 ----------------
@@ -156,6 +172,7 @@ The final operator surface provides:
     - post-confirmation plan revalidation before the first write
     - real HASH / WRITE / FLUSH / VERIFY byte progress
     - percent, byte counts, MiB/s, and elapsed phase time
+    - determinate 100% completion presentation
     - resizable keyboard-accessible native layout
     - JSON evidence under Documents\DEADFLASH\Evidence
     - explicit VERIFIED, UNVERIFIED, EVIDENCE-FAILED, and FAILED result states
