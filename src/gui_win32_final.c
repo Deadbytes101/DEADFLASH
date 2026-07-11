@@ -1442,6 +1442,7 @@ static DWORD WINAPI df_gui_write_thread(LPVOID parameter) {
     context.operation = "write_attested_gui";
     context.source_path = job->source_path;
     context.target_path = job->target.path;
+    context.plan_seal = job->attestation.plan_hex;
     context.target = &job->target;
     context.write_options = &job->options;
     context.write_result = &job->result;
