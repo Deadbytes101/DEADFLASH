@@ -26,4 +26,4 @@ static BOOL df_gui_init_common_controls(const INITCOMMONCONTROLSEX *requested) {
 }
 
 #define InitCommonControlsEx df_gui_init_common_controls
-#include "gui_win32_v2.c"
+#include "gui_win32_final.c"
