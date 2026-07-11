@@ -59,6 +59,9 @@ if(WIN32 AND DEADFLASH_BUILD_GUI)
         src/gui_win32_bootstrap.c
         src/deadflash-gui.rc
     )
+    target_include_directories(deadflash-gui PRIVATE
+        "${CMAKE_CURRENT_SOURCE_DIR}/src"
+    )
     target_compile_definitions(deadflash-gui PRIVATE
         UNICODE
         _UNICODE
