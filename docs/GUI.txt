@@ -1,0 +1,107 @@
+DEADFLASH GUI
+=============
+
+NATIVE WINDOWS FRONTEND
+-----------------------
+
+The Windows build produces:
+
+    deadflash-gui.exe
+
+This is a native Win32 application. It does not use Electron, a browser
+runtime, Qt, .NET, or a bundled web renderer.
+
+PURPOSE
+-------
+
+The GUI is a thin operator surface over the same destructive-storage core used
+by the CLI. The core remains authoritative for target inspection, safety
+checks, exact writes, flushes, readback verification, and JSON evidence.
+
+CURRENT WORKFLOW
+----------------
+
+    1. Start deadflash-gui.exe.
+    2. Press RUN AS ADMIN when Windows elevation is required.
+    3. Select an IMG, ISO, or BIN source image.
+    4. Select a physical target from the enumerated device list.
+    5. Read the complete device overview.
+    6. Select FULL, SAMPLED, or NONE verification.
+    7. Keep LOCK + DISMOUNT enabled for mounted removable media.
+    8. Press WRITE + VERIFY.
+    9. Confirm the destructive operation in the Windows warning dialog.
+   10. Retain the generated deadflash-evidence-*.json file.
+
+DEVICE OVERVIEW
+---------------
+
+The interface displays:
+
+    - PhysicalDrive path
+    - vendor and product
+    - capacity
+    - bus descriptor
+    - logical and physical sector sizes
+    - identity strength
+    - hardware-bound confirmation token
+    - removable state
+    - mounted state
+    - read-only state
+    - system-disk classification
+
+SAFETY
+------
+
+The GUI never enables a write when:
+
+    - administrator access is missing
+    - no source image is selected
+    - no target is selected
+    - the target is classified as the system disk
+    - the target reports read-only status
+    - the target is mounted and LOCK + DISMOUNT is disabled
+
+The GUI does not expose the force-system-disk override. System-disk writes are
+blocked in both the interface and the core.
+
+PROGRESS
+--------
+
+The first GUI build uses an indeterminate progress bar. The core currently
+returns final byte counts and timings but does not expose a per-chunk progress
+callback. The interface does not invent a fake percentage.
+
+The operation log reports the real final state, bytes written, bytes verified,
+hash/write/flush/verify timings, errors, and evidence path.
+
+BUILD
+-----
+
+From a Visual Studio Developer PowerShell or Command Prompt:
+
+    cmake -S . -B build -DDEADFLASH_WARNINGS_AS_ERRORS=ON
+    cmake --build build --config Release --parallel
+
+Output:
+
+    build\Release\deadflash-gui.exe
+
+QUALIFICATION
+-------------
+
+The normal MSVC qualification build includes deadflash-gui.exe. A GUI change
+is not accepted merely because the window looks correct. It must compile under
+MSVC /W4 /WX while the seven core tests and proof/corruption E2E still pass.
+
+CURRENT LIMITS
+--------------
+
+    - Windows only
+    - physical-drive imaging only in the GUI
+    - no FAT32 formatting screen yet
+    - no plan-seal/proof-manifest screen yet
+    - no per-byte progress callback yet
+    - no drag-and-drop yet
+    - no custom application icon yet
+
+No magic. The interface may simplify operation, but it may not weaken truth.
