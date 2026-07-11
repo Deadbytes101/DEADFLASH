@@ -78,6 +78,20 @@ int main(void) {
                                 first.source_sha256, 32u))
         return 10;
 
+    /*
+     * Reproduce the GUI calling pattern exactly: the input target path lives
+     * inside the same df_target_info object that is refreshed as output.
+     */
+    memset(&target_info, 0, sizeof(target_info));
+    if (snprintf(target_info.path, sizeof(target_info.path), "%s", target) < 0)
+        return 14;
+    if (df_write_image_attested(source, target_info.path, &options,
+                                first.plan_hex, &target_info,
+                                &result, &error) != DF_OK)
+        return 15;
+    if (strcmp(target_info.path, target) != 0) return 16;
+    if (strcmp(result.final_state, "success_verified") != 0) return 17;
+
     (void)remove(source);
     (void)remove(target);
     return 0;
