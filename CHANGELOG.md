@@ -4,7 +4,8 @@ DEADFLASH CHANGELOG
 1.0.0 - 2026-07-11
 ------------------
 
-INITIAL EVIDENCE-FIRST RELEASE CANDIDATE.
+FINAL 1.0.0 IMPLEMENTATION FREEZE.
+RELEASE PUBLICATION REMAINS EVIDENCE-GATED.
 
     - Added raw image writer with explicit-offset I/O.
     - Added SHA-256 source hashing.
@@ -35,3 +36,12 @@ INITIAL EVIDENCE-FIRST RELEASE CANDIDATE.
     - Added attested GUI JSON evidence under Documents\DEADFLASH\Evidence.
     - Added Windows requireAdministrator, Common Controls v6, DPI, long-path,
       and 1.0.0 version resources.
+    - Fixed target-path input/output aliasing in the attested write API and added
+      an exact regression test for the native GUI calling pattern.
+    - Passed a real SanDisk 3.2Gen1 physical-device write, cache flush, and full
+      readback verification for 2,685,403,136 bytes with zero retries, zero
+      mismatches, and identical source/target SHA-256 values.
+    - Retained the successful physical GUI evidence at
+      bench/results/deadflash-evidence-20260711-155239.json.
+    - Finalized completion presentation: determinate 100% progress and a clean
+      success status instead of an empty error line.
