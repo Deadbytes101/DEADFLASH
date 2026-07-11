@@ -7,6 +7,7 @@ set(CMAKE_C_EXTENSIONS OFF)
 
 option(DEADFLASH_WARNINGS_AS_ERRORS "Treat compiler warnings as errors" ON)
 option(DEADFLASH_BUILD_TESTS "Build DEADFLASH tests" ON)
+option(DEADFLASH_BUILD_GUI "Build the native Windows GUI" ON)
 
 if(MSVC)
     add_compile_definitions(_CRT_SECURE_NO_WARNINGS)
@@ -52,6 +53,18 @@ add_executable(deadflash-proof src/proof_main.c)
 target_link_libraries(deadflash-proof PRIVATE deadflash_core)
 deadflash_enable_warnings(deadflash-proof)
 
+if(WIN32 AND DEADFLASH_BUILD_GUI)
+    add_executable(deadflash-gui WIN32 src/gui_win32.c)
+    target_compile_definitions(deadflash-gui PRIVATE UNICODE _UNICODE)
+    target_link_libraries(deadflash-gui PRIVATE
+        deadflash_core
+        comctl32
+        comdlg32
+        shell32
+    )
+    deadflash_enable_warnings(deadflash-gui)
+endif()
+
 if(DEADFLASH_BUILD_TESTS)
     enable_testing()
 
@@ -92,3 +105,6 @@ if(DEADFLASH_BUILD_TESTS)
 endif()
 
 install(TARGETS deadflash deadflash-proof RUNTIME DESTINATION bin)
+if(WIN32 AND DEADFLASH_BUILD_GUI)
+    install(TARGETS deadflash-gui RUNTIME DESTINATION bin)
+endif()
