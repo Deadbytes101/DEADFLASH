@@ -54,7 +54,7 @@ target_link_libraries(deadflash-proof PRIVATE deadflash_core)
 deadflash_enable_warnings(deadflash-proof)
 
 if(WIN32 AND DEADFLASH_BUILD_GUI)
-    add_executable(deadflash-gui WIN32 src/gui_win32_v2.c)
+    add_executable(deadflash-gui WIN32 src/gui_win32_bootstrap.c)
     target_compile_definitions(deadflash-gui PRIVATE
         UNICODE
         _UNICODE
