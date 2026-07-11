@@ -6,15 +6,15 @@ param(
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = 'Stop'
 
-$resolved = Resolve-Path -LiteralPath $Path
-$item = Get-Item -LiteralPath $resolved
-$bytes = [System.IO.File]::ReadAllBytes($resolved)
+$resolvedPath = (Resolve-Path -LiteralPath $Path).Path
+$item = Get-Item -LiteralPath $resolvedPath
+$bytes = [System.IO.File]::ReadAllBytes($resolvedPath)
 
 if ($bytes.Length -lt 256) {
-    throw "GUI binary is too small to be a PE image: $resolved"
+    throw "GUI binary is too small to be a PE image: $resolvedPath"
 }
 if ($bytes[0] -ne 0x4d -or $bytes[1] -ne 0x5a) {
-    throw "GUI binary has no MZ header: $resolved"
+    throw "GUI binary has no MZ header: $resolvedPath"
 }
 
 $peOffset = [BitConverter]::ToInt32($bytes, 0x3c)
@@ -60,5 +60,5 @@ if ($ascii.IndexOf('longPathAware', [System.StringComparison]::Ordinal) -lt 0) {
 }
 
 Write-Host '[PASS] deadflash-gui.exe PE subsystem, 1.0.0 version, and manifest'
-Write-Host "       File: $resolved"
+Write-Host "       File: $resolvedPath"
 Write-Host "       Version: $($version.FileVersion)"
