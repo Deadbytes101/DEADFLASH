@@ -4,7 +4,7 @@ DEADFLASH CHANGELOG
 1.0.0 - 2026-07-11
 ------------------
 
-INITIAL EVIDENCE-FIRST CORE RELEASE CANDIDATE.
+INITIAL EVIDENCE-FIRST RELEASE CANDIDATE.
 
     - Added raw image writer with explicit-offset I/O.
     - Added SHA-256 source hashing.
@@ -25,3 +25,13 @@ INITIAL EVIDENCE-FIRST CORE RELEASE CANDIDATE.
     - Added strict C17 builds with warnings as errors.
     - Added SHA-256, pipeline, identity, FAT32, attestation, corruption, and
       exact-offset proof tests.
+    - Added native Win32 image-writer frontend with source preflight.
+    - Added real phase-aware byte progress for hash, write, flush, and verify.
+    - Added resizable keyboard-accessible operator layout and image drag/drop.
+    - Added system-disk hiding plus source-versus-target capacity blocking.
+    - Added final destructive confirmation containing source hash, target token,
+      complete write policy, and cryptographic plan seal.
+    - Added post-confirmation plan revalidation before the first media write.
+    - Added attested GUI JSON evidence under Documents\DEADFLASH\Evidence.
+    - Added Windows requireAdministrator, Common Controls v6, DPI, long-path,
+      and 1.0.0 version resources.
