@@ -1,28 +1,31 @@
 cmake_minimum_required(VERSION 3.20)
-project(DEADFLASH VERSION 1.0.0 LANGUAGES C)
 
-set(CMAKE_C_STANDARD 17)
-set(CMAKE_C_STANDARD_REQUIRED ON)
-set(CMAKE_C_EXTENSIONS OFF)
+project(deadflash VERSION 1.0.0 LANGUAGES C)
 
 option(DEADFLASH_WARNINGS_AS_ERRORS "Treat compiler warnings as errors" ON)
 option(DEADFLASH_BUILD_TESTS "Build DEADFLASH tests" ON)
 option(DEADFLASH_BUILD_GUI "Build the native Windows GUI" ON)
 
-if(MSVC)
-    add_compile_definitions(_CRT_SECURE_NO_WARNINGS)
-endif()
+set(CMAKE_C_STANDARD 17)
+set(CMAKE_C_STANDARD_REQUIRED ON)
+set(CMAKE_C_EXTENSIONS OFF)
 
-function(deadflash_enable_warnings target_name)
+function(deadflash_enable_warnings target)
     if(MSVC)
-        target_compile_options(${target_name} PRIVATE /W4)
+        target_compile_options(${target} PRIVATE /W4)
         if(DEADFLASH_WARNINGS_AS_ERRORS)
-            target_compile_options(${target_name} PRIVATE /WX)
+            target_compile_options(${target} PRIVATE /WX)
         endif()
     else()
-        target_compile_options(${target_name} PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
+        target_compile_options(${target} PRIVATE
+            -Wall
+            -Wextra
+            -Wpedantic
+            -Wconversion
+            -Wshadow
+        )
         if(DEADFLASH_WARNINGS_AS_ERRORS)
-            target_compile_options(${target_name} PRIVATE -Werror)
+            target_compile_options(${target} PRIVATE -Werror)
         endif()
     endif()
 endfunction()
@@ -37,11 +40,12 @@ add_library(deadflash_core STATIC
     src/attest.c
     src/proof.c
 )
-
 target_include_directories(deadflash_core PUBLIC include)
-target_compile_definitions(deadflash_core PRIVATE _FILE_OFFSET_BITS=64)
-if(NOT WIN32)
-    target_compile_definitions(deadflash_core PRIVATE _POSIX_C_SOURCE=200809L _XOPEN_SOURCE=700)
+if(WIN32)
+    target_compile_definitions(deadflash_core PRIVATE
+        _CRT_SECURE_NO_WARNINGS
+        _WIN32_WINNT=0x0601
+    )
 endif()
 deadflash_enable_warnings(deadflash_core)
 
@@ -79,6 +83,7 @@ if(WIN32 AND DEADFLASH_BUILD_GUI)
         comctl32
         comdlg32
         shell32
+        uxtheme
     )
     deadflash_enable_warnings(deadflash-gui)
     add_custom_command(TARGET deadflash-gui POST_BUILD
@@ -129,9 +134,4 @@ if(DEADFLASH_BUILD_TESTS)
     target_link_libraries(test_fingerprint PRIVATE deadflash_core)
     deadflash_enable_warnings(test_fingerprint)
     add_test(NAME fingerprint COMMAND test_fingerprint)
-endif()
-
-install(TARGETS deadflash deadflash-proof RUNTIME DESTINATION bin)
-if(WIN32 AND DEADFLASH_BUILD_GUI)
-    install(TARGETS deadflash-gui RUNTIME DESTINATION bin)
 endif()
