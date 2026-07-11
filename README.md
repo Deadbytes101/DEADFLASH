@@ -17,6 +17,9 @@ STATUS
 
     CORE + FINAL NATIVE WINDOWS 1.0.0 IMPLEMENTATION FROZEN
 
+    IMPLEMENTATION HEAD : bc9f4f029c532abc5f23d2085d652b2e434467ae
+    EVIDENCE HEAD       : aa7adb2c1c375daea5a4acc06b93c7db553a2beb
+
     - Raw IMG/ISO byte-for-byte writing
     - SHA-256 source hashing
     - Streaming hash of the exact bytes submitted to the writer
@@ -36,7 +39,7 @@ STATUS
     - Source preflight size + SHA-256
     - Real phase and byte progress from the storage core
     - Attested destructive confirmation and plan-seal evidence
-    - MSVC + Windows SDK Release build validated: 7/7 + proof E2E
+    - Final-head MSVC + Windows SDK Release build: 7/7 + proof E2E
     - First physical USB write, flush, and full-readback checkpoint passed
     - Release publication remains evidence-gated
 
@@ -60,6 +63,22 @@ source and target SHA-256 values.
 This checkpoint proves one complete physical write path. It does not replace the
 remaining unplug, reconnect, power-cycle, fault-injection, multi-controller, and
 Rufus equal-class release gates.
+
+FINAL WINDOWS QUALIFICATION
+---------------------------
+
+The retained final-head Windows run used Visual Studio 18 2026 x64 and Windows
+SDK 10.0.26100.0. The Release build passed warnings-as-errors, CTest passed 7/7,
+and the proof/corruption E2E reached success_verified, success_proven, and exact
+first-bad-byte localization.
+
+    bench/results/msvc-qualification-20260711T090901Z.json
+    bench/results/msvc-qualification-20260711T091840Z.json
+    bench/results/msvc-e2e-20260711T091840Z.json
+
+The first record retains the UI-only MSVC C4232 failure. The second and third
+records retain the corrected final-head pass. Failed qualification records are
+part of the evidence chain and are not deleted.
 
 COMPETITIVE EDGE
 ----------------
