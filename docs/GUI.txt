@@ -1,5 +1,5 @@
-DEADFLASH GUI
-=============
+DEADFLASH GUI 1.0.0
+===================
 
 NATIVE WINDOWS FRONTEND
 -----------------------
@@ -8,71 +8,175 @@ The Windows build produces:
 
     deadflash-gui.exe
 
-This is a native Win32 application. It does not use Electron, a browser
+The frontend is native C17 and Win32. It does not use Electron, a browser
 runtime, Qt, .NET, or a bundled web renderer.
 
-PURPOSE
--------
+The executable carries Windows version metadata, a Common Controls v6
+manifest, DPI awareness, long-path awareness, and a requireAdministrator
+execution level.
 
-The GUI is a thin operator surface over the same destructive-storage core used
-by the CLI. The core remains authoritative for target inspection, safety
-checks, exact writes, flushes, readback verification, and JSON evidence.
+FINAL OPERATOR WORKFLOW
+-----------------------
 
-CURRENT WORKFLOW
+    1. Start deadflash-gui.exe and accept Windows elevation.
+    2. Select or drag an IMG, ISO, or BIN source image into the window.
+    3. Wait for source preflight to report size and SHA-256.
+    4. Select a non-system physical target.
+    5. Read the DEVICE & SAFETY OVERVIEW.
+    6. Choose FULL, SAMPLED, or NO readback verification.
+    7. Keep LOCK + DISMOUNT enabled when the target has mounted volumes.
+    8. Press WRITE + VERIFY.
+    9. Wait while DEADFLASH builds a fresh operation plan seal.
+   10. Read the final destructive confirmation in full.
+   11. Confirm only when source, target, token, policy, and plan seal agree.
+   12. Retain the JSON record under Documents\DEADFLASH\Evidence.
+
+SOURCE PREFLIGHT
 ----------------
 
-    1. Start deadflash-gui.exe.
-    2. Press RUN AS ADMIN when Windows elevation is required.
-    3. Select an IMG, ISO, or BIN source image.
-    4. Select a physical target from the enumerated device list.
-    5. Read the complete device overview.
-    6. Select FULL, SAMPLED, or NONE verification.
-    7. Keep LOCK + DISMOUNT enabled for mounted removable media.
-    8. Press WRITE + VERIFY.
-    9. Confirm the destructive operation in the Windows warning dialog.
-   10. Retain the generated deadflash-evidence-*.json file.
+Before the write button can become ready, the GUI reads the complete source
+and displays:
 
-DEVICE OVERVIEW
+    FILE
+    SIZE
+    SHA-256
+
+The visible preflight is not treated as final authorization. Pressing WRITE +
+VERIFY starts a fresh attestation pass. After confirmation, the sealed plan is
+revalidated again before the first destructive write.
+
+TARGET LIST
+-----------
+
+The GUI enumerates PhysicalDrive0 through PhysicalDrive31 on a worker thread.
+Windows system disks are counted in the operation log but hidden from the
+selection list. The interface never exposes force-system-disk.
+
+Each visible target displays:
+
+    PhysicalDrive path
+    vendor and product
+    capacity
+    bus type
+    removable or fixed media classification
+    logical and physical sector sizes
+    SERIAL-BOUND, DESCRIPTOR-BOUND, or GEOMETRY-ONLY identity
+    hardware-bound target token
+    mounted and read-only safety state
+    source-versus-target capacity result
+
+READY AND BLOCKED STATES
+------------------------
+
+The status banner is authoritative operator guidance. WRITE remains disabled
+when any required condition is missing.
+
+    BLOCKED -- administrator access missing
+    BLOCKED -- source preflight missing or failed
+    BLOCKED -- no target selected
+    BLOCKED -- target is read-only
+    BLOCKED -- source image exceeds target capacity
+    BLOCKED -- mounted target without LOCK + DISMOUNT
+    READY   -- sealed write and configured verification may proceed
+
+System-disk rejection is enforced in both the interface and the core. The GUI
+contains no system-disk bypass.
+
+ATTESTED DESTRUCTIVE CONFIRMATION
+--------------------------------
+
+Before confirmation, DEADFLASH seals all destructive inputs:
+
+    source size and SHA-256
+    target token, kind, capacity, and sector geometry
+    verify mode and sample count
+    buffer size and retry policy
+    direct-I/O policy
+    device permission
+    mounted-volume policy
+    system-disk policy
+
+The confirmation dialog displays source, target, policy, target token, and the
+64-character plan seal. YES is not the default button.
+
+After confirmation, df_write_image_attested() rebuilds and compares the plan.
+A changed source, device identity, target geometry, or I/O policy fails before
+the first write.
+
+REAL PROGRESS
+-------------
+
+The progress bar is driven by byte counts reported by the storage core. The GUI
+does not invent a timer-based percentage.
+
+    PREPARING TARGET
+    HASHING OR REVALIDATING SOURCE
+    WRITING IMAGE
+    FLUSHING DEVICE CACHE
+    VERIFYING READBACK
+    FINALIZING EVIDENCE
+
+For byte phases the interface displays:
+
+    percent
+    completed bytes
+    total bytes
+    current MiB/s
+    phase elapsed time
+
+FULL verification reads and hashes every source byte written. SAMPLED
+verification reports the sampled bytes examined. NONE is clearly marked
+UNPROVEN and uses a warning state.
+
+RESULT TRUTH
+------------
+
+A green completion state requires all of the following:
+
+    write succeeded
+    cache flush succeeded
+    configured readback verification succeeded
+    JSON evidence was saved
+
+Other outcomes are distinguished explicitly:
+
+    SUCCESS_VERIFIED
+    SUCCESS_UNVERIFIED
+    VERIFIED BUT EVIDENCE FILE FAILED
+    NON-SUCCESS RESULT
+
+The interface never converts an evidence-write failure into a fully green run.
+The complete operation log remains visible after every result.
+
+JSON EVIDENCE
+-------------
+
+GUI evidence is written to:
+
+    Documents\DEADFLASH\Evidence\deadflash-evidence-*.json
+
+The record includes:
+
+    operation = write_attested_gui
+    confirmed plan seal
+    full target fingerprint and token
+    full write policy
+    source and target hashes
+    byte counts and retries
+    hash, write, flush, verify, and total timing
+    final state and exact error
+
+OPEN EVIDENCE FOLDER becomes available when the record was saved.
+
+WINDOW BEHAVIOR
 ---------------
 
-The interface displays:
-
-    - PhysicalDrive path
-    - vendor and product
-    - capacity
-    - bus descriptor
-    - logical and physical sector sizes
-    - identity strength
-    - hardware-bound confirmation token
-    - removable state
-    - mounted state
-    - read-only state
-    - system-disk classification
-
-SAFETY
-------
-
-The GUI never enables a write when:
-
-    - administrator access is missing
-    - no source image is selected
-    - no target is selected
-    - the target is classified as the system disk
-    - the target reports read-only status
-    - the target is mounted and LOCK + DISMOUNT is disabled
-
-The GUI does not expose the force-system-disk override. System-disk writes are
-blocked in both the interface and the core.
-
-PROGRESS
---------
-
-The first GUI build uses an indeterminate progress bar. The core currently
-returns final byte counts and timings but does not expose a per-chunk progress
-callback. The interface does not invent a fake percentage.
-
-The operation log reports the real final state, bytes written, bytes verified,
-hash/write/flush/verify timings, errors, and evidence path.
+    - the window is resizable and has a minimum safe layout size
+    - Tab and Shift+Tab move through operator controls
+    - source images may be dragged into the window
+    - F5 refreshes physical devices
+    - disk scanning, hashing, sealing, writing, and verification use workers
+    - the window cannot close while destructive work is active
 
 BUILD
 -----
@@ -89,19 +193,23 @@ Output:
 QUALIFICATION
 -------------
 
-The normal MSVC qualification build includes deadflash-gui.exe. A GUI change
-is not accepted merely because the window looks correct. It must compile under
-MSVC /W4 /WX while the seven core tests and proof/corruption E2E still pass.
+A GUI change is not accepted because the window merely looks correct.
+Qualification requires:
 
-CURRENT LIMITS
---------------
+    MSVC /W4 /WX Release build
+    UTF-8 source compilation
+    all seven CTest tests passing
+    phase-order and monotonic-progress regression coverage
+    proof and corruption end-to-end pass
+    manual elevated launch and real-device enumeration
+    retained machine-readable evidence
 
-    - Windows only
-    - physical-drive imaging only in the GUI
-    - no FAT32 formatting screen yet
-    - no plan-seal/proof-manifest screen yet
-    - no per-byte progress callback yet
-    - no drag-and-drop yet
-    - no custom application icon yet
+PHYSICAL RELEASE GATES
+----------------------
+
+The frontend may be code-complete while the release remains gated. Production
+v1.0.0 still requires the sacrificial USB write, flush, readback, reconnect,
+power-cycle, unplug-fault, and equal-policy Rufus comparison records tracked in
+issue #2.
 
 No magic. The interface may simplify operation, but it may not weaken truth.
