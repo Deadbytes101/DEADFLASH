@@ -69,6 +69,10 @@ if(WIN32 AND DEADFLASH_BUILD_GUI)
     )
     if(MSVC)
         target_compile_options(deadflash-gui PRIVATE /FIlimits.h /utf-8)
+        # deadflash-gui.rc already embeds RT_MANIFEST resource ID 1.
+        # Disable the linker's generated manifest so CVTRES receives one
+        # authoritative manifest resource instead of two colliding ID 1 entries.
+        target_link_options(deadflash-gui PRIVATE /MANIFEST:NO)
     endif()
     target_link_libraries(deadflash-gui PRIVATE
         deadflash_core
