@@ -24,6 +24,20 @@ typedef enum df_target_kind {
     DF_TARGET_UNKNOWN
 } df_target_kind;
 
+typedef enum df_progress_phase {
+    DF_PROGRESS_PREPARE = 0,
+    DF_PROGRESS_HASH_SOURCE,
+    DF_PROGRESS_WRITE,
+    DF_PROGRESS_FLUSH,
+    DF_PROGRESS_VERIFY,
+    DF_PROGRESS_COMPLETE
+} df_progress_phase;
+
+typedef void (*df_progress_callback)(void *context,
+                                     df_progress_phase phase,
+                                     uint64_t completed,
+                                     uint64_t total);
+
 typedef struct df_target_info {
     char path[DF_MAX_PATH_CHARS];
     char display_name[256];
@@ -70,6 +84,8 @@ typedef struct df_write_options {
     bool direct_io;
     bool truncate_regular_file;
     const char *confirmation_token;
+    df_progress_callback progress_callback;
+    void *progress_context;
 } df_write_options;
 
 typedef struct df_write_result {
@@ -88,6 +104,7 @@ typedef struct df_write_result {
     char final_state[48];
 } df_write_result;
 
+const char *df_progress_phase_name(df_progress_phase phase);
 void df_compute_target_token(const df_target_info *info, char token[DF_TOKEN_HEX_CHARS + 1]);
 df_status df_inspect_target(const char *path, df_target_info *info, df_error *error);
 df_status df_list_targets(FILE *output, df_error *error);
@@ -103,6 +120,10 @@ df_status df_flush(df_file *file, df_error *error);
 df_status df_resize_regular_file(df_file *file, uint64_t size, df_error *error);
 df_status df_hash_file_region(df_file *file, uint64_t length, size_t buffer_size,
                               uint8_t digest[32], df_error *error);
+df_status df_hash_source_path(const char *path, size_t buffer_size,
+                              uint64_t *size_bytes, uint8_t digest[32],
+                              df_progress_callback callback, void *context,
+                              df_error *error);
 df_status df_write_image(const char *source_path, const char *target_path,
                          const df_write_options *options, df_target_info *target_info,
                          df_write_result *result, df_error *error);
