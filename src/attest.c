@@ -132,15 +132,40 @@ df_status df_write_image_attested(const char *source_path,
     df_write_options options;
     df_plan_attestation attestation;
     uint8_t expected[32];
+    char stable_target_path[DF_MAX_PATH_CHARS];
+    const char *target_path_for_write = target_path;
+    size_t target_path_length = 0u;
+    bool target_path_copied = false;
     df_status status;
 
     df_error_clear(error);
+
+    /*
+     * The target path may point into target_info itself. Preserve it before
+     * clearing any output object so callers can safely use info.path as both
+     * the input path and the refreshed output descriptor.
+     */
+    if (target_path != NULL) {
+        target_path_length = strlen(target_path);
+        if (target_path_length < sizeof(stable_target_path)) {
+            memcpy(stable_target_path, target_path, target_path_length + 1u);
+            target_path_for_write = stable_target_path;
+            target_path_copied = true;
+        }
+    }
+
     if (result != NULL) {
         memset(result, 0, sizeof(*result));
         (void)snprintf(result->final_state, sizeof(result->final_state),
                        "failed_before_write");
     }
     if (target_info != NULL) memset(target_info, 0, sizeof(*target_info));
+
+    if (target_path != NULL && !target_path_copied) {
+        df_error_set(error, DF_ERR_TOO_LARGE, 0,
+                     "target path exceeds the supported length");
+        return DF_ERR_TOO_LARGE;
+    }
     if (options_in == NULL || expected_plan_hex == NULL || result == NULL) {
         df_error_set(error, DF_ERR_INVALID_ARGUMENT, 0,
                      "attested write requires options, plan seal, and result");
@@ -153,16 +178,17 @@ df_status df_write_image_attested(const char *source_path,
     }
 
     options = *options_in;
-    status = df_attest_plan(source_path, target_path, &options,
+    status = df_attest_plan(source_path, target_path_for_write, &options,
                             &attestation, error);
     if (status != DF_OK) return status;
+    if (target_info != NULL) *target_info = attestation.target;
     if (!df_constant_time_equal(expected, attestation.plan_sha256, 32u)) {
         df_error_set(error, DF_ERR_CONFIRMATION, 0,
                      "operation plan changed; generate a new plan seal");
         return DF_ERR_CONFIRMATION;
     }
 
-    status = df_write_image(source_path, target_path, &options,
+    status = df_write_image(source_path, target_path_for_write, &options,
                             target_info, result, error);
     if (status == DF_OK &&
         !df_constant_time_equal(result->source_sha256,
