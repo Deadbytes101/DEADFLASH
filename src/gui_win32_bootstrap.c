@@ -28,8 +28,10 @@ static BOOL df_gui_init_common_controls(const INITCOMMONCONTROLSEX *requested) {
     return TRUE;
 }
 
-static LRESULT (WINAPI *const df_gui_real_send_message_w)(
-    HWND, UINT, WPARAM, LPARAM) = SendMessageW;
+static LRESULT WINAPI df_gui_call_send_message_w(
+    HWND window, UINT message, WPARAM wparam, LPARAM lparam) {
+    return SendMessageW(window, message, wparam, lparam);
+}
 
 static void df_gui_set_progress_style(HWND window, BOOL marquee) {
     LONG_PTR style;
@@ -81,13 +83,13 @@ static LRESULT WINAPI df_gui_send_message_w(
                               new_line, new_length);
                 (void)wmemcpy(patched + prefix + new_length,
                               suffix, suffix_length + 1u);
-                return df_gui_real_send_message_w(
+                return df_gui_call_send_message_w(
                     window, message, wparam, (LPARAM)patched);
             }
         }
     }
 
-    return df_gui_real_send_message_w(
+    return df_gui_call_send_message_w(
         window, message, wparam, lparam);
 }
 
