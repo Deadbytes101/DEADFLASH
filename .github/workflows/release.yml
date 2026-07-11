@@ -58,6 +58,42 @@ jobs:
       - name: Benchmark comparison contract
         run: python scripts/test-benchmark-comparator.py
 
+      - name: Validate native Windows GUI metadata
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $path = 'build\Release\deadflash-gui.exe'
+          if (-not (Test-Path $path -PathType Leaf)) {
+            throw "Expected native GUI binary is missing: $path"
+          }
+
+          $bytes = [System.IO.File]::ReadAllBytes((Resolve-Path $path))
+          if ($bytes.Length -lt 256 -or $bytes[0] -ne 0x4d -or $bytes[1] -ne 0x5a) {
+            throw 'deadflash-gui.exe is not a valid MZ executable'
+          }
+          $pe = [BitConverter]::ToInt32($bytes, 0x3c)
+          if ($pe -lt 0 -or $pe + 96 -gt $bytes.Length) {
+            throw 'deadflash-gui.exe has an invalid PE header offset'
+          }
+          if ($bytes[$pe] -ne 0x50 -or $bytes[$pe + 1] -ne 0x45 -or
+              $bytes[$pe + 2] -ne 0 -or $bytes[$pe + 3] -ne 0) {
+            throw 'deadflash-gui.exe has no PE signature'
+          }
+          $optional = $pe + 24
+          $subsystem = [BitConverter]::ToUInt16($bytes, $optional + 68)
+          if ($subsystem -ne 2) {
+            throw "deadflash-gui.exe is not WINDOWS_GUI subsystem: $subsystem"
+          }
+
+          $version = (Get-Item $path).VersionInfo
+          if ($version.FileVersion -notlike '1.0.0*' -or
+              $version.ProductVersion -notlike '1.0.0*' -or
+              $version.ProductName -ne 'DEADFLASH') {
+            throw "Unexpected GUI version metadata: file=$($version.FileVersion) product=$($version.ProductVersion) name=$($version.ProductName)"
+          }
+
+          Write-Host '[PASS] native GUI PE subsystem and 1.0.0 metadata'
+
       - name: Stage core artifacts
         shell: bash
         run: |
