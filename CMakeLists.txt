@@ -55,7 +55,11 @@ deadflash_enable_warnings(deadflash-proof)
 
 if(WIN32 AND DEADFLASH_BUILD_GUI)
     add_executable(deadflash-gui WIN32 src/gui_win32.c)
-    target_compile_definitions(deadflash-gui PRIVATE UNICODE _UNICODE)
+    target_compile_definitions(deadflash-gui PRIVATE
+        UNICODE
+        _UNICODE
+        _WIN32_WINNT=0x0601
+    )
     target_link_libraries(deadflash-gui PRIVATE
         deadflash_core
         comctl32
