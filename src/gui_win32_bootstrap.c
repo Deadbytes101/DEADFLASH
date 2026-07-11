@@ -2,8 +2,8 @@
 #error "deadflash-gui is Windows-only"
 #endif
 
-#include <commctrl.h>
 #include <windows.h>
+#include <commctrl.h>
 
 static BOOL df_gui_init_common_controls(const INITCOMMONCONTROLSEX *requested) {
     INITCOMMONCONTROLSEX progress;
@@ -15,8 +15,8 @@ static BOOL df_gui_init_common_controls(const INITCOMMONCONTROLSEX *requested) {
 
     /*
      * Built-in controls such as STATIC, EDIT, BUTTON, and COMBOBOX do not
-     * require InitCommonControlsEx.  Older or unusual comctl32 environments
-     * may return FALSE with GetLastError()==ERROR_SUCCESS.  The legacy call
+     * require InitCommonControlsEx. Older or unusual comctl32 environments
+     * may return FALSE with GetLastError()==ERROR_SUCCESS. The legacy call
      * still registers the progress class on those systems, so this condition
      * is not a valid reason to terminate before the main window exists.
      */
