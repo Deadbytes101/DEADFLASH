@@ -15,7 +15,7 @@ static int hex_nibble(char c) {
 static bool decode_plan_hex(const char *text, uint8_t output[32]) {
     size_t i;
     if (text == NULL || strlen(text) != 64u) return false;
-    for (i = 0; i < 32u; ++i) {
+    for (i = 0u; i < 32u; ++i) {
         int high = hex_nibble(text[i * 2u]);
         int low = hex_nibble(text[i * 2u + 1u]);
         if (high < 0 || low < 0) return false;
@@ -24,17 +24,10 @@ static bool decode_plan_hex(const char *text, uint8_t output[32]) {
     return true;
 }
 
-static void attest_file_reset(df_file *file) {
-    memset(file, 0, sizeof(*file));
-    file->handle = DF_INVALID_HANDLE;
-    file->alignment = 512u;
-}
-
 df_status df_attest_plan(const char *source_path, const char *target_path,
                          const df_write_options *options_in,
                          df_plan_attestation *attestation, df_error *error) {
     df_write_options options;
-    df_file source;
     char source_hex[65];
     char canonical[1024];
     int written;
@@ -46,6 +39,7 @@ df_status df_attest_plan(const char *source_path, const char *target_path,
                      "attestation requires source, target, and output");
         return DF_ERR_INVALID_ARGUMENT;
     }
+
     memset(&options, 0, sizeof(options));
     if (options_in != NULL) options = *options_in;
     if (options.buffer_size == 0u) options.buffer_size = DF_DEFAULT_BUFFER_SIZE;
@@ -53,34 +47,32 @@ df_status df_attest_plan(const char *source_path, const char *target_path,
     if (options.sample_count == 0u) options.sample_count = 64u;
 
     memset(attestation, 0, sizeof(*attestation));
-    attest_file_reset(&source);
-    status = df_open_source(source_path, &source, error);
+    status = df_hash_source_path(source_path, options.buffer_size,
+                                 &attestation->source_size,
+                                 attestation->source_sha256,
+                                 options.progress_callback,
+                                 options.progress_context, error);
     if (status != DF_OK) return status;
-    if (source.size_bytes == 0u) {
+    if (attestation->source_size == 0u) {
         df_error_set(error, DF_ERR_TOO_SMALL, 0,
                      "cannot attest an empty source image");
-        status = DF_ERR_TOO_SMALL;
-        goto out;
+        return DF_ERR_TOO_SMALL;
     }
-    attestation->source_size = source.size_bytes;
-    status = df_hash_file_region(&source, source.size_bytes, options.buffer_size,
-                                 attestation->source_sha256, error);
-    if (status != DF_OK) goto out;
+
     status = df_inspect_target(target_path, &attestation->target, error);
-    if (status != DF_OK) goto out;
+    if (status != DF_OK) return status;
     if (attestation->target.kind != DF_TARGET_REGULAR_FILE) {
         if (!options.allow_device) {
             df_error_set(error, DF_ERR_DEVICE_REQUIRED, 0,
                          "physical plan seal requires --allow-device");
-            status = DF_ERR_DEVICE_REQUIRED;
-            goto out;
+            return DF_ERR_DEVICE_REQUIRED;
         }
         if (options.confirmation_token == NULL ||
-            strcmp(options.confirmation_token, attestation->target.token) != 0) {
+            strcmp(options.confirmation_token,
+                   attestation->target.token) != 0) {
             df_error_set(error, DF_ERR_CONFIRMATION, 0,
                          "physical plan seal requires the current target token");
-            status = DF_ERR_CONFIRMATION;
-            goto out;
+            return DF_ERR_CONFIRMATION;
         }
     }
 
@@ -121,16 +113,13 @@ df_status df_attest_plan(const char *source_path, const char *target_path,
     if (written < 0 || (size_t)written >= sizeof(canonical)) {
         df_error_set(error, DF_ERR_INTERNAL, 0,
                      "canonical plan exceeded fixed buffer");
-        status = DF_ERR_INTERNAL;
-        goto out;
+        return DF_ERR_INTERNAL;
     }
+
     df_sha256_buffer(canonical, (size_t)written,
                      attestation->plan_sha256);
     df_hex_encode(attestation->plan_sha256, 32u, attestation->plan_hex);
-    status = DF_OK;
-out:
-    df_close_file(&source);
-    return status;
+    return DF_OK;
 }
 
 df_status df_write_image_attested(const char *source_path,
@@ -162,6 +151,7 @@ df_status df_write_image_attested(const char *source_path,
                      "plan seal must be exactly 64 hexadecimal characters");
         return DF_ERR_CONFIRMATION;
     }
+
     options = *options_in;
     status = df_attest_plan(source_path, target_path, &options,
                             &attestation, error);
@@ -171,6 +161,7 @@ df_status df_write_image_attested(const char *source_path,
                      "operation plan changed; generate a new plan seal");
         return DF_ERR_CONFIRMATION;
     }
+
     status = df_write_image(source_path, target_path, &options,
                             target_info, result, error);
     if (status == DF_OK &&
