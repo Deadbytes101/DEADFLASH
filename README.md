@@ -15,7 +15,7 @@ VERSION
 STATUS
 ------
 
-    CORE + FIRST NATIVE WINDOWS GUI UNDER REVIEW
+    CORE + FINAL NATIVE WINDOWS 1.0.0 UX UNDER QUALIFICATION
 
     - Raw IMG/ISO byte-for-byte writing
     - SHA-256 source hashing
@@ -32,15 +32,18 @@ STATUS
     - Per-chunk SHA-256 proof manifests
     - Binary Merkle root over all chunk hashes
     - Exact first-mismatching-byte localization
-    - Native Win32 physical-drive imaging frontend
+    - Final native Win32 physical-drive imaging frontend
+    - Source preflight size + SHA-256
+    - Real phase and byte progress from the storage core
+    - Attested destructive confirmation and plan-seal evidence
     - MSVC + Windows SDK Release build validated: 7/7 + proof E2E
-    - Corrected-head GCC, Clang, sanitizer, and CI reruns still required
+    - Corrected-head final-UX requalification still required
     - Physical-device qualification still required
 
 DEADFLASH does not claim full Rufus feature parity. Version 1.0.0 is the
-candidate destructive-storage core plus a first native Windows operator
-surface. It does not yet perform Windows ISO file extraction, WIM splitting,
-persistence partitions, Windows To Go, or firmware boot emulation.
+candidate destructive-storage core plus a native Windows operator surface.
+It does not perform Windows ISO file extraction, WIM splitting, persistence
+partitions, Windows To Go, or firmware boot emulation.
 
 COMPETITIVE EDGE
 ----------------
@@ -75,6 +78,10 @@ fault-tested directly:
        entering the destructive core. Any changed source, target fingerprint,
        safety override, or I/O policy rejects the old seal.
 
+       The Windows GUI uses the same attestation contract. It displays the plan
+       seal during final destructive confirmation and writes that seal into the
+       JSON evidence record.
+
     3. CHUNK PROOF
 
        `deadflash-proof manifest` records the SHA-256 of every source chunk,
@@ -91,9 +98,9 @@ fault-tested directly:
     5. NO FALSE VERIFIED SUCCESS
 
        Plan-seal mismatch, target-fingerprint change, source mutation, short
-       write, flush failure, readback mismatch, and proof mismatch all produce
-       distinct failure states. None may become `success_verified` or
-       `success_proven`.
+       write, flush failure, readback mismatch, proof mismatch, and evidence
+       output failure remain distinct states. None may silently become a fully
+       green proven run.
 
     6. REPRODUCIBLE COST
 
@@ -127,29 +134,34 @@ The executables are:
     deadflash-proof
     deadflash-gui.exe        Windows only
 
-WINDOWS GUI
------------
+WINDOWS GUI 1.0.0
+-----------------
 
-The GUI is a native Win32 executable. It does not use Electron, a browser
-runtime, Qt, or .NET.
+The GUI is a native C17 + Win32 executable. It does not use Electron, a browser
+runtime, Qt, .NET, or a bundled renderer.
 
     build\Release\deadflash-gui.exe
 
-The first GUI provides:
+The final operator surface provides:
 
-    - IMG / ISO / BIN source selection
-    - PhysicalDrive enumeration
+    - IMG / ISO / BIN selection and drag-and-drop
+    - source size and SHA-256 preflight on a worker thread
+    - PhysicalDrive enumeration with Windows system disks hidden
     - vendor, product, capacity, bus, geometry, identity, and token overview
-    - system-disk and read-only blocking
-    - mounted-volume lock + dismount control
-    - FULL, SAMPLED, or NONE readback verification
-    - destructive confirmation
-    - worker-thread write execution
-    - real final byte counts and timing log
-    - automatic deadflash-evidence-*.json output
+    - source-versus-target capacity gate
+    - system-disk, read-only, and mounted-volume blocking
+    - FULL, SAMPLED, or NO readback verification
+    - fresh cryptographic operation-plan sealing
+    - final confirmation containing source hash, target token, policy, and seal
+    - post-confirmation plan revalidation before the first write
+    - real HASH / WRITE / FLUSH / VERIFY byte progress
+    - percent, byte counts, MiB/s, and elapsed phase time
+    - resizable keyboard-accessible native layout
+    - JSON evidence under Documents\DEADFLASH\Evidence
+    - explicit VERIFIED, UNVERIFIED, EVIDENCE-FAILED, and FAILED result states
 
-The progress bar is intentionally indeterminate until the core exposes a
-per-chunk callback. DEADFLASH does not invent a fake percentage.
+The GUI contains no system-disk override. The core remains authoritative for
+every destructive safety decision.
 
 See `docs/GUI.txt`.
 
