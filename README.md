@@ -15,7 +15,7 @@ VERSION
 STATUS
 ------
 
-    CORE IMPLEMENTATION UNDER REVIEW
+    CORE + FIRST NATIVE WINDOWS GUI UNDER REVIEW
 
     - Raw IMG/ISO byte-for-byte writing
     - SHA-256 source hashing
@@ -32,14 +32,15 @@ STATUS
     - Per-chunk SHA-256 proof manifests
     - Binary Merkle root over all chunk hashes
     - Exact first-mismatching-byte localization
-    - GCC, Clang, MSVC, ASan, and UBSan CI definitions
-    - GCC, Clang, GCC ASan, and GCC UBSan validated locally: 7/7
-    - MSVC and physical-device qualification still required
+    - Native Win32 physical-drive imaging frontend
+    - MSVC + Windows SDK Release build validated: 7/7 + proof E2E
+    - Corrected-head GCC, Clang, sanitizer, and CI reruns still required
+    - Physical-device qualification still required
 
 DEADFLASH does not claim full Rufus feature parity. Version 1.0.0 is the
-candidate destructive-storage core. It does not yet perform Windows ISO file
-extraction, WIM splitting, persistence partitions, Windows To Go, or firmware
-boot emulation.
+candidate destructive-storage core plus a first native Windows operator
+surface. It does not yet perform Windows ISO file extraction, WIM splitting,
+persistence partitions, Windows To Go, or firmware boot emulation.
 
 COMPETITIVE EDGE
 ----------------
@@ -120,10 +121,37 @@ Windows, Developer Command Prompt:
     cmake --build build --config Release
     ctest --test-dir build -C Release --output-on-failure
 
-The installed executables are:
+The executables are:
 
     deadflash
     deadflash-proof
+    deadflash-gui.exe        Windows only
+
+WINDOWS GUI
+-----------
+
+The GUI is a native Win32 executable. It does not use Electron, a browser
+runtime, Qt, or .NET.
+
+    build\Release\deadflash-gui.exe
+
+The first GUI provides:
+
+    - IMG / ISO / BIN source selection
+    - PhysicalDrive enumeration
+    - vendor, product, capacity, bus, geometry, identity, and token overview
+    - system-disk and read-only blocking
+    - mounted-volume lock + dismount control
+    - FULL, SAMPLED, or NONE readback verification
+    - destructive confirmation
+    - worker-thread write execution
+    - real final byte counts and timing log
+    - automatic deadflash-evidence-*.json output
+
+The progress bar is intentionally indeterminate until the core exposes a
+per-chunk callback. DEADFLASH does not invent a fake percentage.
+
+See `docs/GUI.txt`.
 
 FIRST SAFE RUN
 --------------
@@ -218,114 +246,3 @@ for plan sealing, 106.908 ms for proof creation, and 159.016 ms for proof
 verification on a 6,291,579-byte image. One injected bad byte was reported at
 the exact same absolute offset. This is a harness validation result, not a
 USB-speed result and not a Rufus comparison.
-
-A Rufus comparison must use the same image, device, USB port, verification
-policy, flush boundary, conditioning, temperature window, and randomized run
-order. See `docs/BENCHMARK_PROTOCOL.md`.
-
-ARCHITECTURE
-------------
-
-```mermaid
-flowchart TD
-    INPUT[Image + Target + Policy] --> HASH[Source SHA-256]
-    HASH --> TARGET[Hardware Descriptor + Geometry + Serial Hash]
-    TARGET --> TOKEN[Target Token v2]
-    TOKEN --> SAFETY[Safety Authorization + Override Flags]
-    SAFETY --> SEAL[Canonical Plan SHA-256 Seal]
-    SEAL --> AUTH{Seal Recomputed and Equal?}
-    AUTH -->|No| ABORT[failed_before_write]
-    AUTH -->|Yes| RECHECK[Live Hardware Fingerprint Recheck]
-    RECHECK -->|Changed| ABORT
-    RECHECK -->|Equal| CORE[Raw Write Core]
-    CORE --> STREAM[Streaming Source Hash]
-    STREAM --> FLUSH[Device Cache Flush]
-    FLUSH --> VERIFY[Full / Sample Readback]
-    VERIFY --> EVIDENCE[JSON Evidence]
-    VERIFY --> MANIFEST[Chunk SHA-256 Manifest]
-    MANIFEST --> MERKLE[Binary Merkle Root]
-    MERKLE --> PROOF[Source + Target Chunk Readback]
-    PROOF -->|Equal| PROVEN[success_proven]
-    PROOF -->|Different| OFFSET[First Bad Byte Offset]
-```
-
-This is implemented control flow, not a future-feature diagram. The Merkle
-root detects manifest corruption when checked against a trusted recorded root;
-it does not provide authenticity without an external signature.
-
-SAFETY CONTRACT
----------------
-
-     1. A physical plan seal requires --allow-device and the live target token.
-     2. Target token v2 binds hardware descriptors and a serial hash when the
-        operating system and bridge expose them.
-     3. Identity strength is explicit; GEOMETRY_ONLY is never called strong.
-     4. A physical write requires the same device authorization and token.
-     5. Dangerous safety overrides are bound into the plan seal.
-     6. An attested write requires the exact current plan seal.
-     7. The target fingerprint is recomputed before the write handle is opened.
-     8. The running system disk is rejected by default.
-     9. Mounted targets are rejected on POSIX systems.
-    10. Windows volumes are locked and dismounted before raw writes.
-    11. Source mutation during the write loop is detected.
-    12. Verified success requires post-flush readback.
-    13. Proven success requires manifest, source, and target agreement.
-    14. Partial-media failure is explicit.
-    15. There is no generic SUCCESS state.
-
-RESULT STATES
--------------
-
-    success_verified
-    success_unverified
-    success_proven
-    failed_before_write
-    failed_partial_media
-    plan_breach_partial_media
-    verification_failed
-    source_changed
-    target_mismatch
-
-SOURCE TREE
------------
-
-    include/deadflash/   Public core interfaces
-    src/common.c         Errors, timing, parsing, aligned allocation
-    src/sha256.c         Dependency-free SHA-256
-    src/device.c         Discovery, fingerprinting, safety, raw OS I/O
-    src/pipeline.c       Hash, write, flush, and verification pipeline
-    src/attest.c         Canonical operation-plan seals
-    src/proof.c          Chunk manifest, Merkle root, mismatch location
-    src/fat32.c          Native MBR/FAT32 creation and validation
-    src/report.c         JSON evidence writer
-    src/main.c           Standard CLI and benchmark frontend
-    src/proof_main.c     Attested-write and proof frontend
-    tests/               Hash, pipeline, identity, fingerprint, proof, faults
-    scripts/             CI E2E, hardware qualification, benchmark collectors
-    bench/results/       Raw validation and benchmark records
-    bench/hardware/      Physical-device evidence records
-    docs/                Architecture, safety, proof, and benchmark contracts
-
-RELEASE GATE
-------------
-
-The `v1.0.0` tag must not be created until all of these are true:
-
-    - GCC build and all seven tests pass.
-    - Clang build and all seven tests pass.
-    - MSVC build and all seven tests pass.
-    - ASan and UBSan tests pass.
-    - Hardware-fingerprint mutation tests pass.
-    - Plan-seal and safety-policy mutation tests pass.
-    - Proof corruption and exact-offset tests pass.
-    - File-backed evidence JSON parses successfully.
-    - Sacrificial USB write, flush, readback, unplug, power-cycle, and
-      corruption tests pass.
-    - Raw benchmark files are committed without cherry-picking wins.
-
-LICENSE
--------
-
-GNU GPL version 2 only. The repository's LICENSE file is authoritative.
-
-NO MAGIC. NO GUESSING. WRITE THE BYTES AND READ THEM BACK.
