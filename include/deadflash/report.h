@@ -7,6 +7,7 @@ typedef struct df_report_context {
     const char *operation;
     const char *source_path;
     const char *target_path;
+    const char *plan_seal;
     const df_target_info *target;
     const df_write_options *write_options;
     const df_write_result *write_result;
