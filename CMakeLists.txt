@@ -77,6 +77,15 @@ if(WIN32 AND DEADFLASH_BUILD_GUI)
         shell32
     )
     deadflash_enable_warnings(deadflash-gui)
+    add_custom_command(TARGET deadflash-gui POST_BUILD
+        COMMAND powershell.exe
+            -NoProfile
+            -ExecutionPolicy Bypass
+            -File "${CMAKE_CURRENT_SOURCE_DIR}/scripts/check-gui-binary.ps1"
+            -Path "$<TARGET_FILE:deadflash-gui>"
+        VERBATIM
+        COMMENT "Validating DEADFLASH GUI PE metadata and manifest"
+    )
 endif()
 
 if(DEADFLASH_BUILD_TESTS)
