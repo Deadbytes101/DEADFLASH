@@ -60,6 +60,9 @@ if(WIN32 AND DEADFLASH_BUILD_GUI)
         _UNICODE
         _WIN32_WINNT=0x0601
     )
+    if(MSVC)
+        target_compile_options(deadflash-gui PRIVATE /FIlimits.h)
+    endif()
     target_link_libraries(deadflash-gui PRIVATE
         deadflash_core
         comctl32
