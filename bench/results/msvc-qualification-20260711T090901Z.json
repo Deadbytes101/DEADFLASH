@@ -1,0 +1,139 @@
+{
+  "schema": "deadflash.msvc-qualification.v1",
+  "created_utc": "2026-07-11T09:09:01.111035Z",
+  "result": "fail",
+  "source_dir": "D:\\TECHNICAL\\DEADFLASH",
+  "build_dir": "D:\\TECHNICAL\\DEADFLASH\\build-msvc-qualification",
+  "evidence_path": "D:\\TECHNICAL\\DEADFLASH\\bench\\results\\msvc-qualification-20260711T090901Z.json",
+  "log_directory": "C:\\Users\\DEADBYTE\\AppData\\Local\\Temp\\deadflash-msvc-20260711T090901Z",
+  "cmake_generator": "Visual Studio 18 2026",
+  "cmake_architecture": "x64",
+  "expected_tests": 7,
+  "host": {
+    "computer_name": "DESKTOP-VI6B955",
+    "os_description": "Windows-11-10.0.26200-SP0",
+    "os_architecture": "AMD64",
+    "process_architecture": "AMD64",
+    "is_64_bit_process": true,
+    "python": "3.13.13",
+    "python_executable": "C:\\Users\\DEADBYTE\\AppData\\Local\\Programs\\Python\\Python313\\python.exe"
+  },
+  "visual_studio_environment": {
+    "source": "vswhere",
+    "installation_path": "C:\\Program Files\\Microsoft Visual Studio\\18\\Community",
+    "installation_version": "18.5.11716.220",
+    "major_version": 18,
+    "vswhere": "C:\\Program Files (x86)\\Microsoft Visual Studio\\Installer\\vswhere.exe",
+    "cl": "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36223\\bin\\Hostx64\\x64\\cl.exe",
+    "bundled_cmake": "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\Common7\\IDE\\CommonExtensions\\Microsoft\\CMake\\CMake\\bin\\cmake.exe",
+    "bundled_ctest": "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\Common7\\IDE\\CommonExtensions\\Microsoft\\CMake\\CMake\\bin\\ctest.exe"
+  },
+  "build_tools": {
+    "cmake_source": "visual-studio-bundled",
+    "cmake": "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\Common7\\IDE\\CommonExtensions\\Microsoft\\CMake\\CMake\\bin\\cmake.exe",
+    "ctest": "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\Common7\\IDE\\CommonExtensions\\Microsoft\\CMake\\CMake\\bin\\ctest.exe",
+    "python": "C:\\Users\\DEADBYTE\\AppData\\Local\\Programs\\Python\\Python313\\python.exe"
+  },
+  "git_commit": "a2f6122d185a95bcc4cfd8bea214d0812c07a312",
+  "commands": [
+    {
+      "name": "cmake-version",
+      "executable": "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\Common7\\IDE\\CommonExtensions\\Microsoft\\CMake\\CMake\\bin\\cmake.exe",
+      "arguments": [
+        "--version"
+      ],
+      "working_directory": "D:\\TECHNICAL\\DEADFLASH",
+      "exit_code": 0,
+      "timed_out": false,
+      "timeout_seconds": 60,
+      "elapsed_ms": 1003.386,
+      "stdout": "cmake version 4.2.3-msvc3\n\nCMake suite maintained and supported by Kitware (kitware.com/cmake).\n",
+      "stderr": "",
+      "start_error": null
+    },
+    {
+      "name": "cmake-help",
+      "executable": "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\Common7\\IDE\\CommonExtensions\\Microsoft\\CMake\\CMake\\bin\\cmake.exe",
+      "arguments": [
+        "--help"
+      ],
+      "working_directory": "D:\\TECHNICAL\\DEADFLASH",
+      "exit_code": 0,
+      "timed_out": false,
+      "timeout_seconds": 60,
+      "elapsed_ms": 1002.496,
+      "stdout": "Usage\n\n  cmake [options] <path-to-source>\n  cmake [options] <path-to-existing-build>\n  cmake [options] -S <path-to-source> -B <path-to-build>\n\nSpecify a source directory to (re-)generate a build system for it in the\ncurrent working directory.  Specify an existing build directory to\nre-generate its build system.\n\nOptions\n  -S <path-to-source>          = Explicitly specify a source directory.\n  -B <path-to-build>           = Explicitly specify a build directory.\n  -C <initial-cache>           = Pre-load a script to populate the cache.\n  -D <var>[:<type>]=<value>    = Create or update a cmake cache entry.\n  -U <globbing_expr>           = Remove matching entries from CMake cache.\n  -G <generator-name>          = Specify a build system generator.\n  -T <toolset-name>            = Specify toolset name if supported by\n                                 generator.\n  -A <platform-name>           = Specify platform name if supported by\n                                 generator.\n  --toolchain <file>           = Specify toolchain file\n                                 [CMAKE_TOOLCHAIN_FILE].\n  --install-prefix <directory> = Specify install directory\n                                 [CMAKE_INSTALL_PREFIX].\n  --project-file <project-file-name>\n                               = Specify an alternate project file name.\n  -Wdev                        = Enable developer warnings.\n  -Wno-dev                     = Suppress developer warnings.\n  -Werror=dev                  = Make developer warnings errors.\n  -Wno-error=dev               = Make developer warnings not errors.\n  -Wdeprecated                 = Enable deprecation warnings.\n  -Wno-deprecated              = Suppress deprecation warnings.\n  -Werror=deprecated           = Make deprecated macro and function warnings\n                                 errors.\n  -Wno-error=deprecated        = Make deprecated macro and function warnings\n                                 not errors.\n  --preset <preset>,--preset=<preset>\n                               = Specify a configure preset.\n  --list-presets[=<type>]      = List available presets.\n  --workflow [<options>]       = Run a workflow preset.\n  -E                           = CMake command mode.  Run \"cmake -E\" for a\n                                 summary of commands.\n  -L[A][H]                     = List non-advanced cached variables.\n  -LR[A][H] <regex>            = Show cached variables that match the regex.\n  --fresh                      = Configure a fresh build tree, removing any\n                                 existing cache file.\n  --build <dir>                = Build a CMake-generated project binary tree.\n                                 Run \"cmake --build\" to see compatible\n                                 options and a quick help.\n  --install <dir>              = Install a CMake-generated project binary\n                                 tree.  Run \"cmake --install\" to see\n                                 compatible options and a quick help.\n  --open <dir>                 = Open generated project in the associated\n                                 application.\n  -N                           = View mode only.\n  -P <file>                    = Process script mode.\n  --find-package               = Legacy pkg-config like mode.  Do not use.\n  --graphviz=<file>            = Generate graphviz of dependencies, see\n                                 CMakeGraphVizOptions.cmake for more.\n  --system-information [file]  = Dump information about this system.\n  --print-config-dir           = Print CMake config directory for user-wide\n                                 FileAPI queries.\n  --log-level=<ERROR|WARNING|NOTICE|STATUS|VERBOSE|DEBUG|TRACE>\n                               = Set the verbosity of messages from CMake\n                                 files.  --loglevel is also accepted for\n                                 backward compatibility reasons.\n  --log-context                = Prepend log messages with context, if given\n  --debug-trycompile           = Do not delete the try_compile build tree.\n                                 Only useful on one try_compile at a time.\n  --debug-output               = Put cmake in a debug mode.\n  --debug-find                 = Put cmake find in a debug mode.\n  --debug-find-pkg=<pkg-name>[,...]\n                               = Limit cmake debug-find to the\n                                 comma-separated list of packages\n  --debug-find-var=<var-name>[,...]\n                               = Limit cmake debug-find to the\n                                 comma-separated list of result variables\n  --trace                      = Put cmake in trace mode.\n  --trace-expand               = Put cmake in trace mode with variable\n                                 expansion.\n  --trace-format=<human|json-v1>\n                               = Set the output format of the trace.\n  --trace-source=<file>        = Trace only this CMake file/module.  Multiple\n                                 options allowed.\n  --trace-redirect=<file>      = Redirect trace output to a file instead of\n                                 stderr.\n  --warn-uninitialized         = Warn about uninitialized values.\n  --no-warn-unused-cli         = Don't warn about command line options.\n  --check-system-vars          = Find problems with variable usage in system\n                                 files.\n  --compile-no-warning-as-error= Ignore COMPILE_WARNING_AS_ERROR property and\n                                 CMAKE_COMPILE_WARNING_AS_ERROR variable.\n  --link-no-warning-as-error   = Ignore LINK_WARNING_AS_ERROR property and\n                                 CMAKE_LINK_WARNING_AS_ERROR variable.\n  --profiling-format=<fmt>     = Output data for profiling CMake scripts.\n                                 Supported formats: google-trace\n  --profiling-output=<file>    = Select an output path for the profiling data\n                                 enabled through --profiling-format.\n  -h,-H,--help,-help,-usage,/? = Print usage information and exit.\n  --version,-version,/V [<file>]\n                               = Print version number and exit.\n  --help <keyword> [<file>]    = Print help for one keyword and exit.\n  --help-full [<file>]         = Print all help manuals and exit.\n  --help-manual <man> [<file>] = Print one help manual and exit.\n  --help-manual-list [<file>]  = List help manuals available and exit.\n  --help-command <cmd> [<file>]= Print help for one command and exit.\n  --help-command-list [<file>] = List commands with help available and exit.\n  --help-commands [<file>]     = Print cmake-commands manual and exit.\n  --help-module <mod> [<file>] = Print help for one module and exit.\n  --help-module-list [<file>]  = List modules with help available and exit.\n  --help-modules [<file>]      = Print cmake-modules manual and exit.\n  --help-policy <cmp> [<file>] = Print help for one policy and exit.\n  --help-policy-list [<file>]  = List policies with help available and exit.\n  --help-policies [<file>]     = Print cmake-policies manual and exit.\n  --help-property <prop> [<file>]\n                               = Print help for one property and exit.\n  --help-property-list [<file>]= List properties with help available and\n                                 exit.\n  --help-properties [<file>]   = Print cmake-properties manual and exit.\n  --help-variable var [<file>] = Print help for one variable and exit.\n  --help-variable-list [<file>]= List variables with help available and exit.\n  --help-variables [<file>]    = Print cmake-variables manual and exit.\n\nGenerators\n\nThe following generators are available on this platform (* marks default):\n* Visual Studio 18 2026        = Generates Visual Studio 2026 project files.\n                                 Use -A option to specify architecture.\n  Visual Studio 17 2022        = Generates Visual Studio 2022 project files.\n                                 Use -A option to specify architecture.\n  Visual Studio 16 2019        = Generates Visual Studio 2019 project files.\n                                 Use -A option to specify architecture.\n  Visual Studio 15 2017        = Generates Visual Studio 2017 project files.\n                                 Use -A option to specify architecture.\n  Visual Studio 14 2015        = Deprecated.  Generates Visual Studio 2015\n                                 project files.  Use -A option to specify\n                                 architecture.\n  Borland Makefiles            = Generates Borland makefiles.\n  NMake Makefiles              = Generates NMake makefiles.\n  NMake Makefiles JOM          = Generates JOM makefiles.\n  MSYS Makefiles               = Generates MSYS makefiles.\n  MinGW Makefiles              = Generates a make file for use with\n                                 mingw32-make.\n  Green Hills MULTI            = Generates Green Hills MULTI files\n                                 (experimental, work-in-progress).\n  Unix Makefiles               = Generates standard UNIX makefiles.\n  Ninja                        = Generates build.ninja files.\n  Ninja Multi-Config           = Generates build-<Config>.ninja files.\n  FASTBuild                    = Generates fbuild.bff files.\n  Watcom WMake                 = Generates Watcom WMake makefiles.\n  CodeBlocks - MinGW Makefiles = Generates CodeBlocks project files\n                                 (deprecated).\n  CodeBlocks - NMake Makefiles = Generates CodeBlocks project files\n                                 (deprecated).\n  CodeBlocks - NMake Makefiles JOM\n                               = Generates CodeBlocks project files\n                                 (deprecated).\n  CodeBlocks - Ninja           = Generates CodeBlocks project files\n                                 (deprecated).\n  CodeBlocks - Unix Makefiles  = Generates CodeBlocks project files\n                                 (deprecated).\n  CodeLite - MinGW Makefiles   = Generates CodeLite project files\n                                 (deprecated).\n  CodeLite - NMake Makefiles   = Generates CodeLite project files\n                                 (deprecated).\n  CodeLite - Ninja             = Generates CodeLite project files\n                                 (deprecated).\n  CodeLite - Unix Makefiles    = Generates CodeLite project files\n                                 (deprecated).\n  Eclipse CDT4 - NMake Makefiles\n                               = Generates Eclipse CDT 4.0 project files\n                                 (deprecated).\n  Eclipse CDT4 - MinGW Makefiles\n                               = Generates Eclipse CDT 4.0 project files\n                                 (deprecated).\n  Eclipse CDT4 - Ninja         = Generates Eclipse CDT 4.0 project files\n                                 (deprecated).\n  Eclipse CDT4 - Unix Makefiles= Generates Eclipse CDT 4.0 project files\n                                 (deprecated).\n  Kate - MinGW Makefiles       = Generates Kate project files (deprecated).\n  Kate - NMake Makefiles       = Generates Kate project files (deprecated).\n  Kate - Ninja                 = Generates Kate project files (deprecated).\n  Kate - Ninja Multi-Config    = Generates Kate project files (deprecated).\n  Kate - Unix Makefiles        = Generates Kate project files (deprecated).\n  Sublime Text 2 - MinGW Makefiles\n                               = Generates Sublime Text 2 project files\n                                 (deprecated).\n  Sublime Text 2 - NMake Makefiles\n                               = Generates Sublime Text 2 project files\n                                 (deprecated).\n  Sublime Text 2 - Ninja       = Generates Sublime Text 2 project files\n                                 (deprecated).\n  Sublime Text 2 - Unix Makefiles\n                               = Generates Sublime Text 2 project files\n                                 (deprecated).\n\n",
+      "stderr": "",
+      "start_error": null
+    },
+    {
+      "name": "cl-version",
+      "executable": "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36223\\bin\\Hostx64\\x64\\cl.exe",
+      "arguments": [
+        "/nologo",
+        "/Bv",
+        "/TC",
+        "/Zs",
+        "C:\\Users\\DEADBYTE\\AppData\\Local\\Temp\\deadflash-msvc-20260711T090901Z\\cl-version-probe.c"
+      ],
+      "working_directory": "D:\\TECHNICAL\\DEADFLASH",
+      "exit_code": 0,
+      "timed_out": false,
+      "timeout_seconds": 60,
+      "elapsed_ms": 1002.383,
+      "stdout": "cl-version-probe.c\n",
+      "stderr": "Compiler Passes:\n C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36223\\bin\\Hostx64\\x64\\cl.exe:        Version 19.51.36223.2\n C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36223\\bin\\Hostx64\\x64\\c1.dll:        Version 19.51.36223.2\n C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36223\\bin\\Hostx64\\x64\\c1xx.dll:      Version 19.51.36223.2\n C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36223\\bin\\Hostx64\\x64\\c2.dll:        Version 19.51.36223.2\n C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36223\\bin\\Hostx64\\x64\\c1xx.dll:      Version 19.51.36223.2\n C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36223\\bin\\Hostx64\\x64\\link.exe:      Version 14.51.36223.2\n C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36223\\bin\\Hostx64\\x64\\mspdb140.dll:  Version 14.51.36223.2\n C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36223\\bin\\Hostx64\\x64\\1033\\clui.dll: Version 19.51.36223.2\n\n",
+      "start_error": null
+    },
+    {
+      "name": "cmake-configure",
+      "executable": "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\Common7\\IDE\\CommonExtensions\\Microsoft\\CMake\\CMake\\bin\\cmake.exe",
+      "arguments": [
+        "-S",
+        "D:\\TECHNICAL\\DEADFLASH",
+        "-B",
+        "D:\\TECHNICAL\\DEADFLASH\\build-msvc-qualification",
+        "-G",
+        "Visual Studio 18 2026",
+        "-A",
+        "x64",
+        "-DDEADFLASH_WARNINGS_AS_ERRORS=ON",
+        "-DDEADFLASH_BUILD_TESTS=ON"
+      ],
+      "working_directory": "D:\\TECHNICAL\\DEADFLASH",
+      "exit_code": 0,
+      "timed_out": false,
+      "timeout_seconds": 300,
+      "elapsed_ms": 2002.912,
+      "stdout": "-- Selecting Windows SDK version 10.0.26100.0 to target Windows 10.0.26200.\n-- The C compiler identification is MSVC 19.50.35729.0\n-- Detecting C compiler ABI info\n-- Detecting C compiler ABI info - done\n-- Check for working C compiler: C:/Program Files/Microsoft Visual Studio/18/Community/VC/Tools/MSVC/14.50.35717/bin/Hostx64/x64/cl.exe - skipped\n-- Detecting C compile features\n-- Detecting C compile features - done\n-- Configuring done (1.4s)\n-- Generating done (0.1s)\n-- Build files have been written to: D:/TECHNICAL/DEADFLASH/build-msvc-qualification\n",
+      "stderr": "",
+      "start_error": null
+    },
+    {
+      "name": "cmake-build",
+      "executable": "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\Common7\\IDE\\CommonExtensions\\Microsoft\\CMake\\CMake\\bin\\cmake.exe",
+      "arguments": [
+        "--build",
+        "D:\\TECHNICAL\\DEADFLASH\\build-msvc-qualification",
+        "--config",
+        "Release",
+        "--parallel"
+      ],
+      "working_directory": "D:\\TECHNICAL\\DEADFLASH",
+      "exit_code": 1,
+      "timed_out": false,
+      "timeout_seconds": 1800,
+      "elapsed_ms": 4003.741,
+      "stdout": "MSBuild version 18.5.4+cb4e32d21 for .NET Framework\n\n  1>Checking Build System\n  Building Custom Rule D:/TECHNICAL/DEADFLASH/CMakeLists.txt\n  common.c\n  sha256.c\n  device.c\n  pipeline.c\n  fat32.c\n  report.c\n  attest.c\n  proof.c\n  Generating Code...\n  deadflash_core.vcxproj -> D:\\TECHNICAL\\DEADFLASH\\build-msvc-qualification\\Release\\deadflash_core.lib\n  Building Custom Rule D:/TECHNICAL/DEADFLASH/CMakeLists.txt\n  Building Custom Rule D:/TECHNICAL/DEADFLASH/CMakeLists.txt\n  Building Custom Rule D:/TECHNICAL/DEADFLASH/CMakeLists.txt\n  Building Custom Rule D:/TECHNICAL/DEADFLASH/CMakeLists.txt\n  Building Custom Rule D:/TECHNICAL/DEADFLASH/CMakeLists.txt\n  Building Custom Rule D:/TECHNICAL/DEADFLASH/CMakeLists.txt\n  Building Custom Rule D:/TECHNICAL/DEADFLASH/CMakeLists.txt\n  Building Custom Rule D:/TECHNICAL/DEADFLASH/CMakeLists.txt\n  Building Custom Rule D:/TECHNICAL/DEADFLASH/CMakeLists.txt\n  Building Custom Rule D:/TECHNICAL/DEADFLASH/CMakeLists.txt\n  main.c\n  test_attest.c\n  test_proof.c\n  gui_win32_bootstrap.c\n  proof_main.c\n  test_sha256.c\n  test_fat32.c\n  test_identity.c\n  test_fingerprint.c\n  test_sha256.vcxproj -> D:\\TECHNICAL\\DEADFLASH\\build-msvc-qualification\\Release\\test_sha256.exe\n  deadflash.vcxproj -> D:\\TECHNICAL\\DEADFLASH\\build-msvc-qualification\\Release\\deadflash.exe\nD:\\TECHNICAL\\DEADFLASH\\src\\gui_win32_bootstrap.c(31,16): error C2220: the following warning is treated as an error [D:\\TECHNICAL\\DEADFLASH\\build-msvc-qualification\\deadflash-gui.vcxproj]\nD:\\TECHNICAL\\DEADFLASH\\src\\gui_win32_bootstrap.c(31,16): warning C4232: nonstandard extension used: 'df_gui_real_send_message_w': address of dllimport 'SendMessageW' is not static, identity not guaranteed [D:\\TECHNICAL\\DEADFLASH\\build-msvc-qualification\\deadflash-gui.vcxproj]\n      C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.26100.0\\um\\winuser.h(3709,1):\n      see declaration of 'SendMessageW'\n  \n  test_fat32.vcxproj -> D:\\TECHNICAL\\DEADFLASH\\build-msvc-qualification\\Release\\test_fat32.exe\n  test_attest.vcxproj -> D:\\TECHNICAL\\DEADFLASH\\build-msvc-qualification\\Release\\test_attest.exe\n  test_proof.vcxproj -> D:\\TECHNICAL\\DEADFLASH\\build-msvc-qualification\\Release\\test_proof.exe\n  test_fingerprint.vcxproj -> D:\\TECHNICAL\\DEADFLASH\\build-msvc-qualification\\Release\\test_fingerprint.exe\n  test_identity.vcxproj -> D:\\TECHNICAL\\DEADFLASH\\build-msvc-qualification\\Release\\test_identity.exe\n  test_pipeline.c\n  deadflash-proof.vcxproj -> D:\\TECHNICAL\\DEADFLASH\\build-msvc-qualification\\Release\\deadflash-proof.exe\n  test_pipeline.vcxproj -> D:\\TECHNICAL\\DEADFLASH\\build-msvc-qualification\\Release\\test_pipeline.exe\n",
+      "stderr": "",
+      "start_error": null
+    }
+  ],
+  "tests": null,
+  "e2e": null,
+  "error": {
+    "type": "QualificationError",
+    "message": "Command 'cmake-build' failed with exit code 1."
+  },
+  "completed_utc": "2026-07-11T09:09:10.331018Z"
+}
