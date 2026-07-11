@@ -22,6 +22,20 @@ if ([string]::IsNullOrWhiteSpace($SourceDir)) {
     $SourceDir = Split-Path -Parent $scriptRoot
 }
 
+$runningGui = @(Get-Process deadflash-gui -ErrorAction SilentlyContinue)
+if ($runningGui.Count -ne 0) {
+    $pidText = ($runningGui | ForEach-Object { $_.Id }) -join ', '
+    throw @"
+deadflash-gui.exe is still running (PID: $pidText) and may lock the build artifact.
+Close the GUI before qualification. The executable requires Administrator rights,
+so a non-elevated PowerShell may receive Access is denied when stopping it.
+
+Close the window normally, or run this command and accept UAC:
+
+Start-Process powershell.exe -Verb RunAs -Wait -ArgumentList '-NoProfile','-Command','Stop-Process -Name deadflash-gui -Force'
+"@
+}
+
 $python = Get-Command python.exe -ErrorAction SilentlyContinue
 if ($null -eq $python) {
     throw 'Required executable is unavailable: python.exe'
