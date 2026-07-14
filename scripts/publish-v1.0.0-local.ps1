@@ -137,9 +137,24 @@ try {
         throw "Local tag already exists: $tag"
     }
 
-    $releaseProbe = @(& gh release view $tag --repo $repo 2>&1)
-    $releaseProbeExitCode = $LASTEXITCODE
-    if ($releaseProbeExitCode -eq 0) {
+    # `gh release view` writes "release not found" to stderr and exits 1 when
+    # the release is absent. Windows PowerShell 5.1 turns redirected native
+    # stderr into NativeCommandError under ErrorActionPreference=Stop. Listing
+    # releases returns valid JSON and exit 0 even when the repository has none.
+    $releaseListJson = Get-NativeText 'LIST GITHUB RELEASES' {
+        gh release list --repo $repo --limit 100 --json tagName
+    }
+    $releaseRecords = @()
+    if (-not [string]::IsNullOrWhiteSpace($releaseListJson)) {
+        $parsedReleases = $releaseListJson | ConvertFrom-Json
+        if ($null -ne $parsedReleases) {
+            $releaseRecords = @($parsedReleases)
+        }
+    }
+    $matchingReleases = @(
+        $releaseRecords | Where-Object { $_.tagName -eq $tag }
+    )
+    if ($matchingReleases.Count -ne 0) {
         throw "GitHub release already exists: $tag"
     }
 
