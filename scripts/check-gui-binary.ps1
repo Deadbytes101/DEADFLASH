@@ -68,6 +68,7 @@ if ($null -eq $icon) {
 $bitmap = $null
 $bluePixels = 0
 $yellowPixels = 0
+$metalPixels = 0
 try {
     $bitmap = $icon.ToBitmap()
     for ($y = 0; $y -lt $bitmap.Height; $y++) {
@@ -86,6 +87,12 @@ try {
                 $color.B -le 100) {
                 $yellowPixels++
             }
+            $maximum = [Math]::Max($color.R, [Math]::Max($color.G, $color.B))
+            $minimum = [Math]::Min($color.R, [Math]::Min($color.G, $color.B))
+            if ($color.R -ge 90 -and $color.R -le 235 -and
+                ($maximum - $minimum) -le 28) {
+                $metalPixels++
+            }
         }
     }
 } finally {
@@ -95,11 +102,13 @@ try {
     $icon.Dispose()
 }
 
-if ($bluePixels -lt 10 -or $yellowPixels -lt 5) {
-    throw "Embedded icon does not match the DEADBYTE blue/yellow mark: blue=$bluePixels yellow=$yellowPixels"
+if ($bluePixels -lt 10 -or
+    $yellowPixels -lt 5 -or
+    $metalPixels -lt 5) {
+    throw "Embedded icon is not the DEADFLASH USB design: blue=$bluePixels yellow=$yellowPixels metal=$metalPixels"
 }
 
-Write-Host '[PASS] deadflash-gui.exe PE subsystem, 1.0.0 version, manifest, and DEADBYTE icon'
+Write-Host '[PASS] deadflash-gui.exe PE subsystem, 1.0.0 version, manifest, and DEADFLASH USB icon'
 Write-Host "       File: $resolvedPath"
 Write-Host "       Version: $($version.FileVersion)"
-Write-Host "       Icon pixels: blue=$bluePixels yellow=$yellowPixels"
+Write-Host "       Icon pixels: blue=$bluePixels yellow=$yellowPixels metal=$metalPixels"
