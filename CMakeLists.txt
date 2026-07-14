@@ -36,6 +36,7 @@ add_library(deadflash_core STATIC
     src/report.c
     src/attest.c
     src/proof.c
+    src/clean.c
 )
 
 target_include_directories(deadflash_core PUBLIC include)
@@ -130,6 +131,11 @@ if(DEADFLASH_BUILD_TESTS)
     target_link_libraries(test_fingerprint PRIVATE deadflash_core)
     deadflash_enable_warnings(test_fingerprint)
     add_test(NAME fingerprint COMMAND test_fingerprint)
+
+    add_executable(test_clean tests/test_clean.c)
+    target_link_libraries(test_clean PRIVATE deadflash_core)
+    deadflash_enable_warnings(test_clean)
+    add_test(NAME clean COMMAND test_clean)
 endif()
 
 install(TARGETS deadflash deadflash-proof RUNTIME DESTINATION bin)
