@@ -104,7 +104,7 @@ static unsigned df_clean_count_partitions(
             continue;
         }
         if (entry->PartitionStyle == PARTITION_STYLE_MBR &&
-            entry->Info.Mbr.PartitionType == PARTITION_ENTRY_UNUSED) {
+            entry->Mbr.PartitionType == PARTITION_ENTRY_UNUSED) {
             continue;
         }
         ++count;
@@ -148,9 +148,9 @@ static df_status df_clean_query_layout_handle(
             snapshot->partition_count =
                 df_clean_count_partitions(layout, returned);
             if (layout->PartitionStyle == PARTITION_STYLE_MBR) {
-                snapshot->mbr_signature = layout->Info.Mbr.Signature;
+                snapshot->mbr_signature = layout->Mbr.Signature;
             } else if (layout->PartitionStyle == PARTITION_STYLE_GPT) {
-                snapshot->gpt_disk_id = layout->Info.Gpt.DiskId;
+                snapshot->gpt_disk_id = layout->Gpt.DiskId;
             }
             free(buffer);
             return DF_OK;
