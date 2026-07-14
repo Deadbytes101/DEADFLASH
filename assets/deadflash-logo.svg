@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="240" viewBox="0 0 960 240" role="img" aria-labelledby="title desc">
+  <title id="title">DEADBYTE DEADFLASH</title>
+  <desc id="desc">Blue and yellow pixel DEADBYTE mark with the DEADFLASH wordmark.</desc>
+  <g shape-rendering="crispEdges">
+    <path fill="#000000" d="M16 16h152v16h24v16h24v24h24v96h-24v24h-24v16H16z"/>
+    <path fill="#0041B5" d="M24 24h136v16h24v16h24v24h24v80h-24v24h-24v16H24z"/>
+    <path fill="#000000" d="M48 56h40v40H48zm0 48h40v40H48zm0 48h40v40H48zm56-96h64v8h16v16h16v32h-16v32h16v32h-16v16h-80z"/>
+    <path fill="#FFD437" d="M56 64h24v24H56zm0 48h24v24H56zm0 48h24v24H56zm56-96h48v8h16v16h16v16h-24v32h24v16h-24v32h-56z"/>
+  </g>
+  <text x="280" y="112" fill="#0041B5" font-family="Consolas, 'Lucida Console', monospace" font-size="82" font-weight="700" letter-spacing="3">DEADFLASH</text>
+  <rect x="284" y="132" width="610" height="8" fill="#FFD437"/>
+  <text x="282" y="178" fill="#202020" font-family="Consolas, 'Lucida Console', monospace" font-size="24" font-weight="700" letter-spacing="1">DEADBYTE STORAGE TOOLS</text>
+  <text x="282" y="211" fill="#505050" font-family="Consolas, 'Lucida Console', monospace" font-size="18" letter-spacing="1">WRITE THE IMAGE. VERIFY THE TRUTH.</text>
+</svg>
