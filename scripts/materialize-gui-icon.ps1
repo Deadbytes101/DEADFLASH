@@ -25,20 +25,21 @@ function New-ScaledPointArray {
     if (($Coordinates.Count % 2) -ne 0) {
         throw 'Point coordinate list must contain x/y pairs.'
     }
-    $points = New-Object 'System.Drawing.Point[]' ($Coordinates.Count / 2)
+    $count = [int]($Coordinates.Count / 2)
+    $points = [System.Drawing.Point[]]::new($count)
     for ($index = 0; $index -lt $Coordinates.Count; $index += 2) {
-        $points[$index / 2] = New-Object System.Drawing.Point(
+        $points[[int]($index / 2)] = [System.Drawing.Point]::new(
             (Scale-IconValue $Coordinates[$index] $Size),
             (Scale-IconValue $Coordinates[$index + 1] $Size)
         )
     }
-    return $points
+    return ,$points
 }
 
 function New-DeadflashBitmap {
     param([int]$Size)
 
-    $bitmap = New-Object System.Drawing.Bitmap(
+    $bitmap = [System.Drawing.Bitmap]::new(
         $Size,
         $Size,
         [System.Drawing.Imaging.PixelFormat]::Format32bppArgb
@@ -49,13 +50,13 @@ function New-DeadflashBitmap {
     $graphics.PixelOffsetMode = [System.Drawing.Drawing2D.PixelOffsetMode]::Half
     $graphics.Clear([System.Drawing.Color]::Transparent)
 
-    $black = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(255, 8, 10, 14))
-    $blue = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(255, 0, 65, 181))
-    $blueDark = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(255, 0, 38, 112))
-    $yellow = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(255, 255, 212, 55))
-    $silver = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(255, 205, 210, 216))
-    $silverDark = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(255, 112, 120, 132))
-    $white = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(255, 245, 245, 235))
+    $black = [System.Drawing.SolidBrush]::new([System.Drawing.Color]::FromArgb(255, 8, 10, 14))
+    $blue = [System.Drawing.SolidBrush]::new([System.Drawing.Color]::FromArgb(255, 0, 65, 181))
+    $blueDark = [System.Drawing.SolidBrush]::new([System.Drawing.Color]::FromArgb(255, 0, 38, 112))
+    $yellow = [System.Drawing.SolidBrush]::new([System.Drawing.Color]::FromArgb(255, 255, 212, 55))
+    $silver = [System.Drawing.SolidBrush]::new([System.Drawing.Color]::FromArgb(255, 205, 210, 216))
+    $silverDark = [System.Drawing.SolidBrush]::new([System.Drawing.Color]::FromArgb(255, 112, 120, 132))
+    $white = [System.Drawing.SolidBrush]::new([System.Drawing.Color]::FromArgb(255, 245, 245, 235))
 
     try {
         $rectangles = @(
@@ -74,7 +75,7 @@ function New-DeadflashBitmap {
         )
         foreach ($rectangle in $rectangles) {
             $graphics.FillRectangle(
-                $rectangle[0],
+                [System.Drawing.Brush]$rectangle[0],
                 (Scale-IconValue $rectangle[1] $Size),
                 (Scale-IconValue $rectangle[2] $Size),
                 [Math]::Max(1, (Scale-IconValue $rectangle[3] $Size)),
@@ -82,26 +83,17 @@ function New-DeadflashBitmap {
             )
         }
 
-        $graphics.FillPolygon(
-            $black,
-            (New-ScaledPointArray @(50,90, 206,90, 226,110, 226,218, 204,240, 52,240, 30,218, 30,110) $Size)
-        )
-        $graphics.FillPolygon(
-            $blue,
-            (New-ScaledPointArray @(60,102, 196,102, 214,114, 214,210, 196,228, 60,228, 42,210, 42,114) $Size)
-        )
-        $graphics.FillPolygon(
-            $blueDark,
-            (New-ScaledPointArray @(42,196, 214,196, 214,210, 196,228, 60,228, 42,210) $Size)
-        )
-        $graphics.FillPolygon(
-            $black,
-            (New-ScaledPointArray @(142,112, 166,112, 140,148, 172,148, 102,218, 124,166, 94,166) $Size)
-        )
-        $graphics.FillPolygon(
-            $yellow,
-            (New-ScaledPointArray @(144,120, 154,120, 130,156, 158,156, 118,200, 136,158, 108,158) $Size)
-        )
+        [System.Drawing.Point[]]$outer = New-ScaledPointArray @(50,90, 206,90, 226,110, 226,218, 204,240, 52,240, 30,218, 30,110) $Size
+        [System.Drawing.Point[]]$inner = New-ScaledPointArray @(60,102, 196,102, 214,114, 214,210, 196,228, 60,228, 42,210, 42,114) $Size
+        [System.Drawing.Point[]]$shadow = New-ScaledPointArray @(42,196, 214,196, 214,210, 196,228, 60,228, 42,210) $Size
+        [System.Drawing.Point[]]$boltOutline = New-ScaledPointArray @(142,112, 166,112, 140,148, 172,148, 102,218, 124,166, 94,166) $Size
+        [System.Drawing.Point[]]$bolt = New-ScaledPointArray @(144,120, 154,120, 130,156, 158,156, 118,200, 136,158, 108,158) $Size
+
+        $graphics.FillPolygon($black, $outer)
+        $graphics.FillPolygon($blue, $inner)
+        $graphics.FillPolygon($blueDark, $shadow)
+        $graphics.FillPolygon($black, $boltOutline)
+        $graphics.FillPolygon($yellow, $bolt)
     } finally {
         $black.Dispose()
         $blue.Dispose()
@@ -120,7 +112,7 @@ $images = @()
 try {
     foreach ($size in $sizes) {
         $bitmap = New-DeadflashBitmap $size
-        $stream = New-Object System.IO.MemoryStream
+        $stream = [System.IO.MemoryStream]::new()
         try {
             $bitmap.Save($stream, [System.Drawing.Imaging.ImageFormat]::Png)
             $images += [PSCustomObject]@{
@@ -140,7 +132,7 @@ try {
         [System.IO.FileAccess]::Write,
         [System.IO.FileShare]::None
     )
-    $writer = New-Object System.IO.BinaryWriter($file)
+    $writer = [System.IO.BinaryWriter]::new($file)
     try {
         $writer.Write([UInt16]0)
         $writer.Write([UInt16]1)
