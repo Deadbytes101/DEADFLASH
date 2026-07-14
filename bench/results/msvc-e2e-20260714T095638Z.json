@@ -1,0 +1,102 @@
+{
+  "schema": "deadflash.e2e-proof.v1",
+  "platform": "win32",
+  "python": "3.11.9 (tags/v3.11.9:de54cf5, Apr  2 2024, 10:12:12) [MSC v.1938 64 bit (AMD64)]",
+  "source_size": 6291579,
+  "source_sha256": "8dcc87bfefd38f65a76bc76b5fd4fc79bbb8f6b570a2a7dfe70a4cf4f718474e",
+  "plan_seal": "96701eef8be7f9ae752f732fd76341ceeb300e6a200932150755d48b5f880583",
+  "chunk": "1MiB",
+  "write_state": "success_verified",
+  "proof_state": "success_proven",
+  "corruption_state": "target_mismatch",
+  "injected_bad_offset": 3145806,
+  "reported_bad_offset": 3145806,
+  "original_byte": 89,
+  "replacement_byte": 252,
+  "commands": [
+    {
+      "argv": [
+        "D:\\TECHNICAL\\DEADFLASH\\build-msvc-qualification\\Release\\deadflash.exe",
+        "version"
+      ],
+      "returncode": 0,
+      "elapsed_ms": 6.101,
+      "stdout": "DEADFLASH 1.0.0\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "D:\\TECHNICAL\\DEADFLASH\\build-msvc-qualification\\Release\\deadflash-proof.exe",
+        "version"
+      ],
+      "returncode": 0,
+      "elapsed_ms": 5.476,
+      "stdout": "DEADFLASH PROOF 1.0.0\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "D:\\TECHNICAL\\DEADFLASH\\build-msvc-qualification\\Release\\deadflash-proof.exe",
+        "seal",
+        "D:\\TECHNICAL\\DEADFLASH\\build-msvc-qualification\\e2e-msvc\\source.img",
+        "D:\\TECHNICAL\\DEADFLASH\\build-msvc-qualification\\e2e-msvc\\target.img",
+        "--verify",
+        "full",
+        "--buffer",
+        "1MiB"
+      ],
+      "returncode": 0,
+      "elapsed_ms": 24.582,
+      "stdout": "SOURCE_SIZE_BYTES  : 6291579\nSOURCE_SHA256      : 8dcc87bfefd38f65a76bc76b5fd4fc79bbb8f6b570a2a7dfe70a4cf4f718474e\nTARGET_TOKEN       : 880f97eed04beae5\nTARGET_SIZE_BYTES  : 6291579\nVERIFY_MODE        : 2\nBUFFER_SIZE        : 1048576\nPLAN_SEAL          : 96701eef8be7f9ae752f732fd76341ceeb300e6a200932150755d48b5f880583\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "D:\\TECHNICAL\\DEADFLASH\\build-msvc-qualification\\Release\\deadflash-proof.exe",
+        "write",
+        "D:\\TECHNICAL\\DEADFLASH\\build-msvc-qualification\\e2e-msvc\\source.img",
+        "D:\\TECHNICAL\\DEADFLASH\\build-msvc-qualification\\e2e-msvc\\target.img",
+        "--seal",
+        "96701eef8be7f9ae752f732fd76341ceeb300e6a200932150755d48b5f880583",
+        "--verify",
+        "full",
+        "--buffer",
+        "1MiB",
+        "--proof",
+        "D:\\TECHNICAL\\DEADFLASH\\build-msvc-qualification\\e2e-msvc\\source.dfp",
+        "--chunk",
+        "1MiB"
+      ],
+      "returncode": 0,
+      "elapsed_ms": 205.349,
+      "stdout": "STATE              : success_verified\nBYTES_WRITTEN      : 6291579\nBYTES_VERIFIED     : 6291579\nTOTAL_MS           : 77.716\nPROOF_STATE        : success_proven\nPROOF_BYTES        : 6291579\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "D:\\TECHNICAL\\DEADFLASH\\build-msvc-qualification\\Release\\deadflash-proof.exe",
+        "verify",
+        "D:\\TECHNICAL\\DEADFLASH\\build-msvc-qualification\\e2e-msvc\\source.dfp",
+        "D:\\TECHNICAL\\DEADFLASH\\build-msvc-qualification\\e2e-msvc\\source.img",
+        "D:\\TECHNICAL\\DEADFLASH\\build-msvc-qualification\\e2e-msvc\\target.img"
+      ],
+      "returncode": 0,
+      "elapsed_ms": 65.222,
+      "stdout": "STATE              : success_proven\nBYTES_VERIFIED     : 6291579\nCHUNKS_VERIFIED    : 7\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "D:\\TECHNICAL\\DEADFLASH\\build-msvc-qualification\\Release\\deadflash-proof.exe",
+        "verify",
+        "D:\\TECHNICAL\\DEADFLASH\\build-msvc-qualification\\e2e-msvc\\source.dfp",
+        "D:\\TECHNICAL\\DEADFLASH\\build-msvc-qualification\\e2e-msvc\\source.img",
+        "D:\\TECHNICAL\\DEADFLASH\\build-msvc-qualification\\e2e-msvc\\target.img"
+      ],
+      "returncode": 1,
+      "elapsed_ms": 44.827,
+      "stdout": "STATE              : target_mismatch\nBYTES_VERIFIED     : 3145728\nCHUNKS_VERIFIED    : 3\nFIRST_BAD_OFFSET   : 3145806\n",
+      "stderr": "ERROR[verification_mismatch]: target mismatch at byte offset 3145806\n"
+    }
+  ]
+}
