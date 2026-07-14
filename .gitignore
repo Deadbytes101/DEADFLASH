@@ -1,5 +1,10 @@
 /build/
+/build-*/
 /out/
+/release-local/
+/release-evidence-local/
+/release-evidence/
+/msvc-evidence/
 *.o
 *.obj
 *.a
