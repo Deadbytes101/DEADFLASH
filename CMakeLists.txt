@@ -36,8 +36,12 @@ add_library(deadflash_core STATIC
     src/report.c
     src/attest.c
     src/proof.c
-    src/clean.c
 )
+if(WIN32)
+    target_sources(deadflash_core PRIVATE src/clean.c)
+else()
+    target_sources(deadflash_core PRIVATE src/clean_stub.c)
+endif()
 
 target_include_directories(deadflash_core PUBLIC include)
 target_compile_definitions(deadflash_core PRIVATE _FILE_OFFSET_BITS=64)
