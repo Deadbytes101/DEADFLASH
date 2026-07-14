@@ -1,14 +1,22 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="960" height="240" viewBox="0 0 960 240" role="img" aria-labelledby="title desc">
-  <title id="title">DEADBYTE DEADFLASH</title>
-  <desc id="desc">Blue and yellow pixel DEADBYTE mark with the DEADFLASH wordmark.</desc>
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="256" viewBox="0 0 960 256" role="img" aria-labelledby="title desc">
+  <title id="title">DEADFLASH by DEADBYTE</title>
+  <desc id="desc">A blue pixel USB flash drive with a metal connector and a yellow write bolt beside the DEADFLASH wordmark.</desc>
   <g shape-rendering="crispEdges">
-    <path fill="#000000" d="M16 16h152v16h24v16h24v24h24v96h-24v24h-24v16H16z"/>
-    <path fill="#0041B5" d="M24 24h136v16h24v16h24v24h24v80h-24v24h-24v16H24z"/>
-    <path fill="#000000" d="M48 56h40v40H48zm0 48h40v40H48zm0 48h40v40H48zm56-96h64v8h16v16h16v32h-16v32h16v32h-16v16h-80z"/>
-    <path fill="#FFD437" d="M56 64h24v24H56zm0 48h24v24H56zm0 48h24v24H56zm56-96h48v8h16v16h16v16h-24v32h24v16h-24v32h-56z"/>
+    <path fill="#080A0E" d="M80 12h96v58h10v34h20l20 20v94l-22 22H52l-22-22v-94l20-20h20V70h10z"/>
+    <path fill="#CDD2D8" d="M92 24h72v46H92z"/>
+    <path fill="#080A0E" d="M102 34h16v20h-16zm36 0h16v20h-16z"/>
+    <path fill="#707884" d="M92 62h72v8H92z"/>
+    <path fill="#002670" d="M82 78h92v26H82z"/>
+    <path fill="#0041B5" d="M60 102h136l18 12v96l-18 18H60l-18-18v-96z"/>
+    <path fill="#002670" d="M42 196h172v14l-18 18H60l-18-18zm0-82h12v82H42z"/>
+    <path fill="#080A0E" d="M142 112h24l-26 36h32l-70 70 22-52H94z"/>
+    <path fill="#FFD437" d="M144 120h10l-24 36h28l-40 44 18-42h-28z"/>
+    <path fill="#080A0E" d="M62 122h16v16H62zm0 24h16v16H62z"/>
+    <path fill="#F5F5EB" d="M66 126h8v8h-8z"/>
+    <path fill="#FFD437" d="M66 150h8v8h-8z"/>
   </g>
-  <text x="280" y="112" fill="#0041B5" font-family="Consolas, 'Lucida Console', monospace" font-size="82" font-weight="700" letter-spacing="3">DEADFLASH</text>
-  <rect x="284" y="132" width="610" height="8" fill="#FFD437"/>
-  <text x="282" y="178" fill="#202020" font-family="Consolas, 'Lucida Console', monospace" font-size="24" font-weight="700" letter-spacing="1">DEADBYTE STORAGE TOOLS</text>
-  <text x="282" y="211" fill="#505050" font-family="Consolas, 'Lucida Console', monospace" font-size="18" letter-spacing="1">WRITE THE IMAGE. VERIFY THE TRUTH.</text>
+  <text x="278" y="112" fill="#0041B5" font-family="Consolas, 'Lucida Console', monospace" font-size="82" font-weight="700" letter-spacing="3">DEADFLASH</text>
+  <rect x="282" y="132" width="612" height="8" fill="#FFD437"/>
+  <text x="280" y="178" fill="#202020" font-family="Consolas, 'Lucida Console', monospace" font-size="24" font-weight="700" letter-spacing="1">DEADBYTE USB IMAGING + CLEAN</text>
+  <text x="280" y="211" fill="#505050" font-family="Consolas, 'Lucida Console', monospace" font-size="18" letter-spacing="1">WRITE THE IMAGE. VERIFY THE TRUTH.</text>
 </svg>
