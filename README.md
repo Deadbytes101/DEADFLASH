@@ -31,7 +31,7 @@ REAL WINDOWS OPERATOR VIEW
 --------------------------
 
 <p align="center">
-  <img src="assets/screenshots/deadflash-windows-operator.svg" width="100%" alt="Actual DEADFLASH 1.0.0 native Win32 operator interface">
+<img width="555" height="555" alt="image" src="https://github.com/user-attachments/assets/f342a383-473f-4368-9992-7f0620586179" />
 </p>
 
 The image above is an actual MSVC-built `deadflash-gui.exe` operator session,
