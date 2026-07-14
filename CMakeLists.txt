@@ -135,7 +135,11 @@ if(DEADFLASH_BUILD_TESTS)
     add_executable(test_clean tests/test_clean.c)
     target_link_libraries(test_clean PRIVATE deadflash_core)
     deadflash_enable_warnings(test_clean)
-    add_test(NAME clean COMMAND test_clean)
+    add_custom_command(TARGET test_clean POST_BUILD
+        COMMAND $<TARGET_FILE:test_clean>
+        VERBATIM
+        COMMENT "Running fail-closed disk clean contract test"
+    )
 endif()
 
 install(TARGETS deadflash deadflash-proof RUNTIME DESTINATION bin)
