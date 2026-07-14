@@ -59,6 +59,47 @@ if ($ascii.IndexOf('longPathAware', [System.StringComparison]::Ordinal) -lt 0) {
     throw 'Embedded longPathAware manifest entry was not found.'
 }
 
-Write-Host '[PASS] deadflash-gui.exe PE subsystem, 1.0.0 version, and manifest'
+Add-Type -AssemblyName System.Drawing
+$icon = [System.Drawing.Icon]::ExtractAssociatedIcon($resolvedPath)
+if ($null -eq $icon) {
+    throw 'The GUI executable has no extractable application icon.'
+}
+
+$bitmap = $null
+$bluePixels = 0
+$yellowPixels = 0
+try {
+    $bitmap = $icon.ToBitmap()
+    for ($y = 0; $y -lt $bitmap.Height; $y++) {
+        for ($x = 0; $x -lt $bitmap.Width; $x++) {
+            $color = $bitmap.GetPixel($x, $y)
+            if ($color.A -lt 128) {
+                continue
+            }
+            if ($color.B -ge 120 -and
+                $color.B -gt ($color.R + 80) -and
+                $color.B -gt ($color.G + 20)) {
+                $bluePixels++
+            }
+            if ($color.R -ge 220 -and
+                $color.G -ge 160 -and
+                $color.B -le 100) {
+                $yellowPixels++
+            }
+        }
+    }
+} finally {
+    if ($null -ne $bitmap) {
+        $bitmap.Dispose()
+    }
+    $icon.Dispose()
+}
+
+if ($bluePixels -lt 10 -or $yellowPixels -lt 5) {
+    throw "Embedded icon does not match the DEADBYTE blue/yellow mark: blue=$bluePixels yellow=$yellowPixels"
+}
+
+Write-Host '[PASS] deadflash-gui.exe PE subsystem, 1.0.0 version, manifest, and DEADBYTE icon'
 Write-Host "       File: $resolvedPath"
 Write-Host "       Version: $($version.FileVersion)"
+Write-Host "       Icon pixels: blue=$bluePixels yellow=$yellowPixels"
