@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - .github/workflows/release-v1.0.0.yml
+      - .github/release-notes-v1.0.0.md
   workflow_dispatch:
 
 permissions:
