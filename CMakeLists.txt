@@ -60,10 +60,47 @@ deadflash_enable_warnings(deadflash-proof)
 
 if(WIN32 AND DEADFLASH_BUILD_GUI)
     enable_language(RC)
+
+    set(DEADFLASH_GUI_ICON_B64
+        "${CMAKE_CURRENT_SOURCE_DIR}/assets/deadflash-gui.ico.b64")
+    set(DEADFLASH_GUI_ICON
+        "${CMAKE_CURRENT_BINARY_DIR}/deadflash-gui.ico")
+    set(DEADFLASH_GUI_RC
+        "${CMAKE_CURRENT_BINARY_DIR}/deadflash-gui.rc")
+    set(DEADFLASH_GUI_MANIFEST
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/deadflash-gui.manifest")
+
+    file(TO_CMAKE_PATH "${DEADFLASH_GUI_ICON}" DEADFLASH_GUI_ICON_RC)
+    file(TO_CMAKE_PATH "${DEADFLASH_GUI_MANIFEST}" DEADFLASH_GUI_MANIFEST_RC)
+    configure_file(
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/deadflash-gui.rc.in"
+        "${DEADFLASH_GUI_RC}"
+        @ONLY
+    )
+
+    add_custom_command(
+        OUTPUT "${DEADFLASH_GUI_ICON}"
+        COMMAND powershell.exe
+            -NoProfile
+            -ExecutionPolicy Bypass
+            -File "${CMAKE_CURRENT_SOURCE_DIR}/scripts/materialize-gui-icon.ps1"
+            -Base64Path "${DEADFLASH_GUI_ICON_B64}"
+            -OutputPath "${DEADFLASH_GUI_ICON}"
+        DEPENDS
+            "${DEADFLASH_GUI_ICON_B64}"
+            "${CMAKE_CURRENT_SOURCE_DIR}/scripts/materialize-gui-icon.ps1"
+        VERBATIM
+        COMMENT "Materializing DEADBYTE brand icon"
+    )
+    add_custom_target(deadflash_gui_brand
+        DEPENDS "${DEADFLASH_GUI_ICON}")
+
     add_executable(deadflash-gui WIN32
         src/gui_win32_bootstrap.c
-        src/deadflash-gui.rc
+        src/gui_brand.c
+        "${DEADFLASH_GUI_RC}"
     )
+    add_dependencies(deadflash-gui deadflash_gui_brand)
     target_include_directories(deadflash-gui PRIVATE
         "${CMAKE_CURRENT_SOURCE_DIR}/src"
     )
@@ -73,11 +110,18 @@ if(WIN32 AND DEADFLASH_BUILD_GUI)
         _WIN32_WINNT=0x0601
     )
     if(MSVC)
-        target_compile_options(deadflash-gui PRIVATE /FIlimits.h /utf-8)
-        # deadflash-gui.rc already embeds RT_MANIFEST resource ID 1.
+        target_compile_options(deadflash-gui PRIVATE
+            /FIlimits.h
+            "/FI${CMAKE_CURRENT_SOURCE_DIR}/src/gui_brand_preinclude.h"
+            /utf-8
+        )
+        # The configured resource file already embeds RT_MANIFEST resource ID 1.
         # Disable the linker's generated manifest so CVTRES receives one
         # authoritative manifest resource instead of two colliding ID 1 entries.
         target_link_options(deadflash-gui PRIVATE /MANIFEST:NO)
+    else()
+        target_compile_options(deadflash-gui PRIVATE
+            -include "${CMAKE_CURRENT_SOURCE_DIR}/src/gui_brand_preinclude.h")
     endif()
     target_link_libraries(deadflash-gui PRIVATE
         deadflash_core
@@ -94,7 +138,7 @@ if(WIN32 AND DEADFLASH_BUILD_GUI)
             -File "${CMAKE_CURRENT_SOURCE_DIR}/scripts/check-gui-binary.ps1"
             -Path "$<TARGET_FILE:deadflash-gui>"
         VERBATIM
-        COMMENT "Validating DEADFLASH GUI PE metadata and manifest"
+        COMMENT "Validating DEADFLASH GUI PE metadata, manifest, and icon"
     )
 endif()
 
