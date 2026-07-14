@@ -1,0 +1,6 @@
+#ifndef DEADFLASH_RESOURCE_H
+#define DEADFLASH_RESOURCE_H
+
+#define IDI_DEADFLASH 101
+
+#endif
