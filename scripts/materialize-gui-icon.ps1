@@ -1,39 +1,182 @@
 param(
     [Parameter(Mandatory = $true)]
-    [string]$Base64Path,
-
-    [Parameter(Mandatory = $true)]
     [string]$OutputPath
 )
 
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = 'Stop'
 
-$source = (Resolve-Path -LiteralPath $Base64Path).Path
+Add-Type -AssemblyName System.Drawing
+
 $destination = [System.IO.Path]::GetFullPath($OutputPath)
 $directory = [System.IO.Path]::GetDirectoryName($destination)
 if ([string]::IsNullOrWhiteSpace($directory)) {
     throw "Could not resolve icon output directory: $destination"
 }
-
 [System.IO.Directory]::CreateDirectory($directory) | Out-Null
-$payload = (Get-Content -LiteralPath $source -Raw) -replace '\s', ''
-$bytes = [Convert]::FromBase64String($payload)
 
-if ($bytes.Length -lt 256) {
-    throw "Decoded icon is unexpectedly small: $($bytes.Length) bytes"
-}
-if ($bytes[0] -ne 0 -or $bytes[1] -ne 0 -or
-    $bytes[2] -ne 1 -or $bytes[3] -ne 0) {
-    throw 'Decoded payload is not a Windows ICO file.'
+function Scale-IconValue {
+    param([int]$Value, [int]$Size)
+    return [int][Math]::Round(($Value * $Size) / 256.0)
 }
 
-$temp = "$destination.tmp-$PID"
+function New-ScaledPointArray {
+    param([int[]]$Coordinates, [int]$Size)
+    if (($Coordinates.Count % 2) -ne 0) {
+        throw 'Point coordinate list must contain x/y pairs.'
+    }
+    $points = New-Object 'System.Drawing.Point[]' ($Coordinates.Count / 2)
+    for ($index = 0; $index -lt $Coordinates.Count; $index += 2) {
+        $points[$index / 2] = New-Object System.Drawing.Point(
+            (Scale-IconValue $Coordinates[$index] $Size),
+            (Scale-IconValue $Coordinates[$index + 1] $Size)
+        )
+    }
+    return $points
+}
+
+function New-DeadflashBitmap {
+    param([int]$Size)
+
+    $bitmap = New-Object System.Drawing.Bitmap(
+        $Size,
+        $Size,
+        [System.Drawing.Imaging.PixelFormat]::Format32bppArgb
+    )
+    $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
+    $graphics.SmoothingMode = [System.Drawing.Drawing2D.SmoothingMode]::None
+    $graphics.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::NearestNeighbor
+    $graphics.PixelOffsetMode = [System.Drawing.Drawing2D.PixelOffsetMode]::Half
+    $graphics.Clear([System.Drawing.Color]::Transparent)
+
+    $black = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(255, 8, 10, 14))
+    $blue = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(255, 0, 65, 181))
+    $blueDark = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(255, 0, 38, 112))
+    $yellow = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(255, 255, 212, 55))
+    $silver = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(255, 205, 210, 216))
+    $silverDark = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(255, 112, 120, 132))
+    $white = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(255, 245, 245, 235))
+
+    try {
+        $rectangles = @(
+            @($black, 80, 12, 96, 70),
+            @($silver, 92, 24, 72, 46),
+            @($black, 102, 34, 16, 20),
+            @($black, 138, 34, 16, 20),
+            @($silverDark, 92, 62, 72, 8),
+            @($black, 70, 70, 116, 34),
+            @($blueDark, 82, 78, 92, 26),
+            @($blueDark, 42, 114, 12, 82),
+            @($black, 62, 122, 16, 16),
+            @($black, 62, 146, 16, 16),
+            @($white, 66, 126, 8, 8),
+            @($yellow, 66, 150, 8, 8)
+        )
+        foreach ($rectangle in $rectangles) {
+            $graphics.FillRectangle(
+                $rectangle[0],
+                (Scale-IconValue $rectangle[1] $Size),
+                (Scale-IconValue $rectangle[2] $Size),
+                [Math]::Max(1, (Scale-IconValue $rectangle[3] $Size)),
+                [Math]::Max(1, (Scale-IconValue $rectangle[4] $Size))
+            )
+        }
+
+        $graphics.FillPolygon(
+            $black,
+            (New-ScaledPointArray @(50,90, 206,90, 226,110, 226,218, 204,240, 52,240, 30,218, 30,110) $Size)
+        )
+        $graphics.FillPolygon(
+            $blue,
+            (New-ScaledPointArray @(60,102, 196,102, 214,114, 214,210, 196,228, 60,228, 42,210, 42,114) $Size)
+        )
+        $graphics.FillPolygon(
+            $blueDark,
+            (New-ScaledPointArray @(42,196, 214,196, 214,210, 196,228, 60,228, 42,210) $Size)
+        )
+        $graphics.FillPolygon(
+            $black,
+            (New-ScaledPointArray @(142,112, 166,112, 140,148, 172,148, 102,218, 124,166, 94,166) $Size)
+        )
+        $graphics.FillPolygon(
+            $yellow,
+            (New-ScaledPointArray @(144,120, 154,120, 130,156, 158,156, 118,200, 136,158, 108,158) $Size)
+        )
+    } finally {
+        $black.Dispose()
+        $blue.Dispose()
+        $blueDark.Dispose()
+        $yellow.Dispose()
+        $silver.Dispose()
+        $silverDark.Dispose()
+        $white.Dispose()
+        $graphics.Dispose()
+    }
+    return $bitmap
+}
+
+$sizes = @(16, 24, 32, 48, 64, 128, 256)
+$images = @()
 try {
-    [System.IO.File]::WriteAllBytes($temp, $bytes)
+    foreach ($size in $sizes) {
+        $bitmap = New-DeadflashBitmap $size
+        $stream = New-Object System.IO.MemoryStream
+        try {
+            $bitmap.Save($stream, [System.Drawing.Imaging.ImageFormat]::Png)
+            $images += [PSCustomObject]@{
+                Size = $size
+                Bytes = $stream.ToArray()
+            }
+        } finally {
+            $stream.Dispose()
+            $bitmap.Dispose()
+        }
+    }
+
+    $temp = "$destination.tmp-$PID"
+    $file = [System.IO.File]::Open(
+        $temp,
+        [System.IO.FileMode]::Create,
+        [System.IO.FileAccess]::Write,
+        [System.IO.FileShare]::None
+    )
+    $writer = New-Object System.IO.BinaryWriter($file)
+    try {
+        $writer.Write([UInt16]0)
+        $writer.Write([UInt16]1)
+        $writer.Write([UInt16]$images.Count)
+
+        [UInt32]$offset = 6 + (16 * $images.Count)
+        foreach ($image in $images) {
+            $dimension = if ($image.Size -eq 256) { 0 } else { $image.Size }
+            $writer.Write([Byte]$dimension)
+            $writer.Write([Byte]$dimension)
+            $writer.Write([Byte]0)
+            $writer.Write([Byte]0)
+            $writer.Write([UInt16]1)
+            $writer.Write([UInt16]32)
+            $writer.Write([UInt32]$image.Bytes.Length)
+            $writer.Write([UInt32]$offset)
+            $offset += [UInt32]$image.Bytes.Length
+        }
+        foreach ($image in $images) {
+            $writer.Write([Byte[]]$image.Bytes)
+        }
+    } finally {
+        $writer.Dispose()
+        $file.Dispose()
+    }
+
     Move-Item -LiteralPath $temp -Destination $destination -Force
 } finally {
-    Remove-Item -LiteralPath $temp -Force -ErrorAction SilentlyContinue
+    Remove-Item -LiteralPath "$destination.tmp-$PID" -Force -ErrorAction SilentlyContinue
 }
 
-Write-Host "[PASS] materialized DEADBYTE icon: $destination"
+$bytes = [System.IO.File]::ReadAllBytes($destination)
+if ($bytes.Length -lt 256 -or
+    $bytes[0] -ne 0 -or $bytes[1] -ne 0 -or
+    $bytes[2] -ne 1 -or $bytes[3] -ne 0) {
+    throw 'Generated DEADFLASH icon failed ICO validation.'
+}
+
+Write-Host "[PASS] generated DEADFLASH USB flash-drive icon: $destination"
