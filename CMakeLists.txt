@@ -61,8 +61,6 @@ deadflash_enable_warnings(deadflash-proof)
 if(WIN32 AND DEADFLASH_BUILD_GUI)
     enable_language(RC)
 
-    set(DEADFLASH_GUI_ICON_B64
-        "${CMAKE_CURRENT_SOURCE_DIR}/assets/deadflash-gui.ico.b64")
     set(DEADFLASH_GUI_ICON
         "${CMAKE_CURRENT_BINARY_DIR}/deadflash-gui.ico")
     set(DEADFLASH_GUI_RC
@@ -84,13 +82,11 @@ if(WIN32 AND DEADFLASH_BUILD_GUI)
             -NoProfile
             -ExecutionPolicy Bypass
             -File "${CMAKE_CURRENT_SOURCE_DIR}/scripts/materialize-gui-icon.ps1"
-            -Base64Path "${DEADFLASH_GUI_ICON_B64}"
             -OutputPath "${DEADFLASH_GUI_ICON}"
         DEPENDS
-            "${DEADFLASH_GUI_ICON_B64}"
             "${CMAKE_CURRENT_SOURCE_DIR}/scripts/materialize-gui-icon.ps1"
         VERBATIM
-        COMMENT "Materializing DEADBYTE brand icon"
+        COMMENT "Generating DEADFLASH USB flash-drive icon"
     )
     add_custom_target(deadflash_gui_brand
         DEPENDS "${DEADFLASH_GUI_ICON}")
@@ -138,7 +134,7 @@ if(WIN32 AND DEADFLASH_BUILD_GUI)
             -File "${CMAKE_CURRENT_SOURCE_DIR}/scripts/check-gui-binary.ps1"
             -Path "$<TARGET_FILE:deadflash-gui>"
         VERBATIM
-        COMMENT "Validating DEADFLASH GUI PE metadata, manifest, and icon"
+        COMMENT "Validating DEADFLASH GUI PE metadata, manifest, and USB icon"
     )
 endif()
 
