@@ -1,0 +1,161 @@
+name: RELEASE V1.0.0
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/release-v1.0.0.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: deadflash-release-v1.0.0
+  cancel-in-progress: false
+
+jobs:
+  build-qualify-publish:
+    name: WINDOWS X64 BUILD QUALIFY AND PUBLISH
+    runs-on: windows-latest
+
+    steps:
+      - name: CHECKOUT TAG TARGET
+        uses: actions/checkout@v4
+
+      - name: SET UP PYTHON
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: RUN MSVC QUALIFICATION
+        shell: pwsh
+        run: >-
+          ./scripts/qualify-msvc.ps1
+          -BuildDir build-release
+          -EvidenceDir release-evidence
+
+      - name: PACKAGE WINDOWS X64 BINARIES
+        shell: pwsh
+        run: |
+          Set-StrictMode -Version Latest
+          $ErrorActionPreference = 'Stop'
+
+          $version = '1.0.0'
+          $buildDir = Join-Path $PWD 'build-release\Release'
+          $releaseDir = Join-Path $PWD 'release'
+          $packageName = "DEADFLASH-$version-windows-x64"
+          $packageDir = Join-Path $releaseDir $packageName
+          $evidenceDir = Join-Path $packageDir 'evidence'
+
+          Remove-Item -LiteralPath $releaseDir -Recurse -Force -ErrorAction SilentlyContinue
+          New-Item -ItemType Directory -Path $packageDir -Force | Out-Null
+          New-Item -ItemType Directory -Path $evidenceDir -Force | Out-Null
+
+          $executables = @(
+              'deadflash-gui.exe',
+              'deadflash.exe',
+              'deadflash-proof.exe'
+          )
+
+          foreach ($name in $executables) {
+              $source = Join-Path $buildDir $name
+              if (-not (Test-Path -LiteralPath $source -PathType Leaf)) {
+                  throw "Qualified release binary is missing: $source"
+              }
+              Copy-Item -LiteralPath $source -Destination (Join-Path $packageDir $name)
+              Copy-Item -LiteralPath $source -Destination (Join-Path $releaseDir $name)
+          }
+
+          foreach ($name in @('README.md', 'CHANGELOG.md', 'LICENSE', 'SECURITY.md')) {
+              $source = Join-Path $PWD $name
+              if (Test-Path -LiteralPath $source -PathType Leaf) {
+                  Copy-Item -LiteralPath $source -Destination (Join-Path $packageDir $name)
+              }
+          }
+
+          Get-ChildItem -LiteralPath (Join-Path $PWD 'release-evidence') -Filter '*.json' |
+              Copy-Item -Destination $evidenceDir
+
+          $packageHashes = foreach ($file in Get-ChildItem -LiteralPath $packageDir -File -Recurse | Sort-Object FullName) {
+              $relative = $file.FullName.Substring($packageDir.Length + 1).Replace('\', '/')
+              $hash = (Get-FileHash -LiteralPath $file.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+              "$hash  $relative"
+          }
+          [System.IO.File]::WriteAllLines(
+              (Join-Path $packageDir 'SHA256SUMS.txt'),
+              $packageHashes,
+              [System.Text.UTF8Encoding]::new($false)
+          )
+
+          $zipPath = Join-Path $releaseDir "$packageName.zip"
+          Compress-Archive -Path (Join-Path $packageDir '*') -DestinationPath $zipPath -CompressionLevel Optimal
+
+          $publicAssets = @(
+              (Join-Path $releaseDir 'deadflash-gui.exe'),
+              (Join-Path $releaseDir 'deadflash.exe'),
+              (Join-Path $releaseDir 'deadflash-proof.exe'),
+              $zipPath
+          )
+          $publicHashes = foreach ($file in $publicAssets) {
+              $hash = (Get-FileHash -LiteralPath $file -Algorithm SHA256).Hash.ToLowerInvariant()
+              "$hash  $([System.IO.Path]::GetFileName($file))"
+          }
+          [System.IO.File]::WriteAllLines(
+              (Join-Path $releaseDir 'SHA256SUMS.txt'),
+              $publicHashes,
+              [System.Text.UTF8Encoding]::new($false)
+          )
+
+          Write-Host 'RELEASE ASSETS'
+          Get-ChildItem -LiteralPath $releaseDir -File |
+              Select-Object Name, Length |
+              Format-Table -AutoSize
+
+      - name: RETAIN QUALIFIED RELEASE PACKAGE
+        uses: actions/upload-artifact@v4
+        with:
+          name: DEADFLASH-1.0.0-windows-x64
+          path: |
+            release/deadflash-gui.exe
+            release/deadflash.exe
+            release/deadflash-proof.exe
+            release/DEADFLASH-1.0.0-windows-x64.zip
+            release/SHA256SUMS.txt
+          if-no-files-found: error
+
+      - name: CREATE TAG AND GITHUB RELEASE
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          Set-StrictMode -Version Latest
+          $ErrorActionPreference = 'Stop'
+
+          $tag = 'v1.0.0'
+          & gh release view $tag --repo $env:GITHUB_REPOSITORY *> $null
+          if ($LASTEXITCODE -eq 0) {
+              throw "Release already exists: $tag"
+          }
+
+          $arguments = @(
+              'release', 'create', $tag,
+              'release/deadflash-gui.exe',
+              'release/deadflash.exe',
+              'release/deadflash-proof.exe',
+              'release/DEADFLASH-1.0.0-windows-x64.zip',
+              'release/SHA256SUMS.txt',
+              '--repo', $env:GITHUB_REPOSITORY,
+              '--target', $env:GITHUB_SHA,
+              '--title', 'DEADFLASH 1.0.0',
+              '--notes-file', '.github/release-notes-v1.0.0.md',
+              '--latest'
+          )
+
+          & gh @arguments
+          if ($LASTEXITCODE -ne 0) {
+              throw "gh release create failed with exit code $LASTEXITCODE"
+          }
+
+          & gh release view $tag --repo $env:GITHUB_REPOSITORY
